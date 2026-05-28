@@ -185,6 +185,122 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   border-radius:10px;border:1px solid var(--bd);margin-bottom:10px;font-size:12px;font-weight:700}
 .cbiome-dot{width:8px;height:8px;border-radius:50%;animation:dp 2s infinite}
 @keyframes dp{0%,100%{opacity:1}50%{opacity:.3}}
+/* ═══════════════════════════════════
+   SECRET / INSANE CUTSCENE
+═══════════════════════════════════ */
+#rareCutscene{
+  position:fixed;
+  inset:0;
+  z-index:99999;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at center,#ffffff22 0%,#000000ee 70%);
+  animation:fadeIn .4s ease;
+}
+
+#rareCutscene::before{
+  content:'';
+  position:absolute;
+  inset:-50%;
+  background:
+    conic-gradient(
+      from 0deg,
+      #ff00ff,
+      #00ffff,
+      #ffffff,
+      #ff8800,
+      #ff00ff
+    );
+  animation:spinAura 4s linear infinite;
+  opacity:.18;
+}
+
+@keyframes spinAura{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+
+.cutscene-box{
+  position:relative;
+  z-index:2;
+  text-align:center;
+  animation:cutPop .7s cubic-bezier(.34,1.56,.64,1);
+}
+
+@keyframes cutPop{
+  0%{
+    transform:scale(.2) rotate(-10deg);
+    opacity:0;
+  }
+  70%{
+    transform:scale(1.08);
+  }
+  100%{
+    transform:scale(1);
+    opacity:1;
+  }
+}
+
+.cut-rarity{
+  font-size:70px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-shadow:
+    0 0 10px #fff,
+    0 0 30px currentColor,
+    0 0 60px currentColor;
+  animation:pulseGlow 1.2s infinite;
+}
+
+@keyframes pulseGlow{
+  0%,100%{
+    transform:scale(1);
+  }
+  50%{
+    transform:scale(1.08);
+  }
+}
+
+.cut-fish{
+  font-size:120px;
+  margin:20px 0;
+  filter:drop-shadow(0 0 30px #fff);
+  animation:floatFish 2s ease-in-out infinite;
+}
+
+@keyframes floatFish{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-20px)}
+}
+
+.cut-name{
+  font-size:36px;
+  font-weight:800;
+  color:white;
+  text-shadow:0 0 20px #fff;
+}
+
+.cut-roll{
+  margin-top:10px;
+  font-size:16px;
+  color:#ffffffcc;
+  font-family:'Space Mono',monospace;
+}
+
+.cut-close{
+  margin-top:24px;
+  padding:12px 26px;
+  border:none;
+  border-radius:12px;
+  font-size:16px;
+  font-weight:800;
+  cursor:pointer;
+  background:white;
+  color:black;
+}
 </style>
 </head>
 <body>
@@ -358,7 +474,34 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 
   </div>
 </div>
+<!-- CUTSCENE -->
+<div id="rareCutscene">
 
+  <div class="cutscene-box">
+
+    <div class="cut-rarity" id="cutRarity">
+      SECRET
+    </div>
+
+    <div class="cut-fish" id="cutFish">
+      🐟
+    </div>
+
+    <div class="cut-name" id="cutName">
+      Fish Name
+    </div>
+
+    <div class="cut-roll" id="cutRoll">
+      Roll: 1/999999
+    </div>
+
+    <button class="cut-close" onclick="closeCutscene()">
+      Tutup
+    </button>
+
+  </div>
+
+</div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ═══════════════════════════════════
@@ -781,6 +924,13 @@ updateLeaderboard();
 
   // Display fish card
   displayFishCard(result);
+  if(
+  result.rarity.id === 'secret' ||
+  result.rarity.id === 'insane' ||
+  testCutscene
+){
+  showCutscene(result);
+}
   document.getElementById('logLine').textContent =
     (CAST_MSGS[result.rarity.id]||'Ikan ditemukan!')
     + ` +${result.coinEarned}🪙`;
@@ -1073,6 +1223,49 @@ function esc(s){
     .replace(/>/g,'&gt;');
 }
 // ═══════════════════════════════════
+// CUTSCENE
+// ═══════════════════════════════════
+let testCutscene = false;
+
+function showCutscene(result){
+
+  const wrap = document.getElementById('rareCutscene');
+
+  const rarity = result.rarity.id;
+
+  let color = '#aa44ff';
+
+  if(rarity === 'insane'){
+    color = '#ff4444';
+  }
+
+  document.getElementById('cutRarity').textContent =
+    result.rarity.name;
+
+  document.getElementById('cutRarity').style.color =
+    color;
+
+  document.getElementById('cutFish').textContent =
+    result.fish.i;
+
+  document.getElementById('cutName').textContent =
+    result.fish.n;
+
+  document.getElementById('cutRoll').textContent =
+    'Roll: 1/' + result.roll.toLocaleString();
+
+  wrap.style.display = 'flex';
+
+  // sound flash vibration
+  if(navigator.vibrate){
+    navigator.vibrate([200,100,200,100,300]);
+  }
+}
+
+function closeCutscene(){
+  document.getElementById('rareCutscene').style.display='none';
+}
+// ═══════════════════════════════════
 // AUTO CAST
 // ═══════════════════════════════════
 function toggleAutoCast(){
@@ -1146,7 +1339,33 @@ async function redeemCode(){
     alert('Code sudah pernah dipakai');
     return;
   }
+  if(code === 'ownwon'){
 
+  testCutscene = true;
+
+  const fake = {
+    fish:{
+      n:'TEST LEVIATHAN',
+      i:'🌌'
+    },
+    rarity:{
+      id:'secret',
+      name:'SECRET'
+    },
+    roll:999999
+  };
+
+  showCutscene(fake);
+
+  alert(
+    '🎬 Test Cutscene Enabled\\n' +
+    'Refresh web untuk mematikan'
+  );
+
+  closeRedeem();
+
+  return;
+}
   if(code === 'freecoin'){
 
     G.coins += 0;
