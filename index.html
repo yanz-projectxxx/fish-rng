@@ -634,6 +634,7 @@ function enterGame(){
   updateStats();
   setBiomeTheme();
   loadLB();
+  updateLeaderboard();
   startLBTimer();
   if(G.foundJungleSecret) document.getElementById('secretBanner').style.display='block';
 }
@@ -957,25 +958,33 @@ async function updateLeaderboard(){
 
   const bf = G.bestFish;
 
-  await sb
+  const payload = {
+    user_id: CU.id,
+
+    username: CU.username,
+
+    fish_name: bf.fish.n,
+    fish_icon: bf.fish.i,
+
+    rarity: bf.rarity.name,
+    rarity_color: bf.rarity.color,
+
+    roll: bf.roll,
+
+    best_score: fishScore(bf),
+
+    updated_at: new Date().toISOString()
+  };
+
+  console.log('UPLOAD LB', payload);
+
+  const { error } = await sb
     .from('leaderboard')
-    .upsert({
-      user_id: CU.id,
+    .upsert(payload);
 
-      username: CU.username,
-
-      fish_name: bf.fish.n,
-      fish_icon: bf.fish.i,
-
-      rarity: bf.rarity.name,
-      rarity_color: bf.rarity.color,
-
-      roll: bf.roll,
-
-      best_score: fishScore(bf),
-
-      updated_at: new Date().toISOString()
-    });
+  if(error){
+    console.error(error);
+  }
 }
 
 async function loadLB(){
@@ -1140,7 +1149,7 @@ async function redeemCode(){
 
   if(code === 'freecoin'){
 
-    G.coins += 50000;
+    G.coins += 0;
 
     await sb
       .from('redeem_claims')
@@ -1152,7 +1161,7 @@ async function redeemCode(){
     updateStats();
     scheduleSave();
 
-    alert('🎉 Redeem berhasil! +50,000 coin');
+    alert('Code telah dihapus');
 
     closeRedeem();
 
