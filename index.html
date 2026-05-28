@@ -1018,55 +1018,143 @@ const CAST_MSGS = {
 };
 
 async function doCast(){
-  if(casting)return;
-  casting=true;
-  const btn=document.getElementById('castBtn');
-  btn.disabled=true;btn.textContent='Melempar...';
 
-  // Show casting animation
-  document.getElementById('catchDisplay').innerHTML=
-    '<div class="casting-animation">🎣</div>';
-  document.getElementById('logLine').textContent='Menunggu ikan...';
+  if(casting) return;
 
-  await sleep(900 + Math.random()*600);
+  casting = true;
 
-  const result = castFish();
-  G.casts++;
-  G.coins += result.coinEarned;
-  if(result.rarity.score >= 20) G.rares++;
+  const btn =
+    document.getElementById('castBtn');
 
-  // Check secret fish in jungle
-  if(result.fish.isSecret && G.currentBiome==='jungle' && !G.foundJungleSecret){
-    G.foundJungleSecret = true;
-    document.getElementById('secretBanner').style.display='block';
+  btn.disabled = true;
+
+  btn.textContent = 'Melempar...';
+
+  try{
+
+    // ANIMASI CAST
+    document.getElementById(
+      'catchDisplay'
+    ).innerHTML =
+      '<div class="casting-animation">🎣</div>';
+
+    document.getElementById(
+      'logLine'
+    ).textContent =
+      'Menunggu ikan...';
+
+    await sleep(
+      900 + Math.random()*600
+    );
+
+    const result = castFish();
+
+    // VALIDASI RESULT
+    if(
+      !result ||
+      !result.rarity ||
+      !result.fish
+    ){
+      throw new Error(
+        'Result invalid'
+      );
+    }
+
+    G.casts++;
+
+    G.coins += result.coinEarned || 0;
+
+    if(result.rarity.score >= 20){
+      G.rares++;
+    }
+
+    // SECRET
+    if(
+      result.fish.isSecret &&
+      result.biome === 'jungle' &&
+      !G.foundJungleSecret
+    ){
+
+      G.foundJungleSecret = true;
+
+      document.getElementById(
+        'secretBanner'
+      ).style.display='block';
+
+      renderRodShop();
+    }
+
+    // BEST FISH
+    const score =
+      result.rarity.score * 100000 +
+      result.roll;
+
+    let bestScore = 0;
+
+    if(
+      G.bestFish &&
+      G.bestFish.rarity
+    ){
+
+      bestScore =
+        G.bestFish.rarity.score * 100000 +
+        G.bestFish.roll;
+    }
+
+    if(
+      !G.bestFish ||
+      score > bestScore
+    ){
+
+      G.bestFish = result;
+
+      renderBestFish();
+    }
+
+    // TAMPILKAN IKAN
+    displayFishCard(result);
+
+    // CUTSCENE
+    if(
+      result.rarity.id === 'secret' ||
+      result.rarity.id === 'insane'
+    ){
+
+      playUltraCutscene(result);
+
+    }
+
+    document.getElementById(
+      'logLine'
+    ).textContent =
+      (CAST_MSGS[result.rarity.id]
+      || 'Ikan ditemukan!')
+      + ` +${result.coinEarned}🪙`;
+
+    updateStats();
+
     renderRodShop();
+
+    scheduleSave();
+
+  }catch(err){
+
+    console.error(err);
+
+    document.getElementById(
+      'logLine'
+    ).textContent =
+      '❌ Terjadi error saat casting';
+
+  }finally{
+
+    casting = false;
+
+    btn.disabled = false;
+
+    btn.textContent = '🎣 Cast!';
+
   }
-
-  // Update best fish
-  const score = fishScore(result);
-  if(!G.bestFish || score > fishScore(G.bestFish)){
-    G.bestFish = result;
-    renderBestFish();
-updateLeaderboard();
-  }
-
-  // Display fish card
-  displayFishCard(result);
-
-// PLAY CUTSCENE
-try{
-
-  if(
-    result.rarity.id === 'secret' ||
-    result.rarity.id === 'insane'
-  ){
-    playUltraCutscene(result);
-  }
-
-}catch(err){
-
-  console.error(err);
-
 }
   document.getElementById('logLine').textContent =
     (CAST_MSGS[result.rarity.id]||'Ikan ditemukan!')
