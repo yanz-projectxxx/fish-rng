@@ -1032,7 +1032,7 @@ async function doCast(){
 
   try{
 
-    // ANIMASI CAST
+    // animasi casting
     document.getElementById(
       'catchDisplay'
     ).innerHTML =
@@ -1044,31 +1044,33 @@ async function doCast(){
       'Menunggu ikan...';
 
     await sleep(
-      900 + Math.random()*600
+      900 + Math.random() * 600
     );
 
+    // hasil ikan
     const result = castFish();
 
-    // VALIDASI RESULT
     if(
       !result ||
-      !result.rarity ||
-      !result.fish
+      !result.fish ||
+      !result.rarity
     ){
       throw new Error(
         'Result invalid'
       );
     }
 
+    // stats
     G.casts++;
 
-    G.coins += result.coinEarned || 0;
+    G.coins +=
+      result.coinEarned || 0;
 
     if(result.rarity.score >= 20){
       G.rares++;
     }
 
-    // SECRET
+    // secret unlock
     if(
       result.fish.isSecret &&
       result.biome === 'jungle' &&
@@ -1079,13 +1081,13 @@ async function doCast(){
 
       document.getElementById(
         'secretBanner'
-      ).style.display='block';
+      ).style.display = 'block';
 
       renderRodShop();
     }
 
-    // BEST FISH
-    const score =
+    // best fish
+    const currentScore =
       result.rarity.score * 100000 +
       result.roll;
 
@@ -1103,7 +1105,7 @@ async function doCast(){
 
     if(
       !G.bestFish ||
-      score > bestScore
+      currentScore > bestScore
     ){
 
       G.bestFish = result;
@@ -1111,25 +1113,41 @@ async function doCast(){
       renderBestFish();
     }
 
-    // TAMPILKAN IKAN
+    // tampilkan fish
     displayFishCard(result);
 
-    // CUTSCENE
+    // cutscene
     if(
       result.rarity.id === 'secret' ||
       result.rarity.id === 'insane'
     ){
 
-      playUltraCutscene(result);
+      if(
+        typeof playUltraCutscene
+        === 'function'
+      ){
+        playUltraCutscene(result);
+      }
 
     }
 
+    // log
     document.getElementById(
       'logLine'
     ).textContent =
-      (CAST_MSGS[result.rarity.id]
-      || 'Ikan ditemukan!')
-      + ` +${result.coinEarned}🪙`;
+
+      (
+        CAST_MSGS[
+          result.rarity.id
+        ] || 'Ikan ditemukan!'
+      )
+
+      + ' +' +
+
+      result.coinEarned
+      .toLocaleString()
+
+      + '🪙';
 
     updateStats();
 
@@ -1141,10 +1159,15 @@ async function doCast(){
 
     console.error(err);
 
+    alert(
+      'ERROR doCast:\\n\\n' +
+      err.message
+    );
+
     document.getElementById(
       'logLine'
     ).textContent =
-      '❌ Terjadi error saat casting';
+      '❌ Error saat casting';
 
   }finally{
 
@@ -1152,19 +1175,10 @@ async function doCast(){
 
     btn.disabled = false;
 
-    btn.textContent = '🎣 Cast!';
+    btn.textContent =
+      '🎣 Cast!';
 
   }
-}
-  document.getElementById('logLine').textContent =
-    (CAST_MSGS[result.rarity.id]||'Ikan ditemukan!')
-    + ` +${result.coinEarned}🪙`;
-
-  updateStats();renderRodShop();scheduleSave();
-
-  await sleep(300);
-  casting=false;
-  btn.disabled=false;btn.textContent='🎣 Cast!';
 }
 
 function displayFishCard(result){
