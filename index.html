@@ -275,12 +275,27 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
     <div class="log" id="logLine">Pilih biome, pilih rod, lalu cast!</div>
 
     <div class="cast-area">
-      <div class="catch-display" id="catchDisplay">
-        <span style="font-size:50px;opacity:.3">🌊</span>
-      </div>
-      <button class="cast-btn" id="castBtn" onclick="doCast()">🎣 Cast!</button>
-    </div>
+  <div class="catch-display" id="catchDisplay">
+    <span style="font-size:50px;opacity:.3">🌊</span>
   </div>
+
+  <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:10px">
+    <button class="cast-btn" id="castBtn" onclick="doCast()">🎣 Cast!</button>
+
+    <button class="cast-btn"
+      id="autoBtn"
+      onclick="toggleAutoCast()"
+      style="background:linear-gradient(135deg,#22c55e,#15803d);min-width:140px">
+      🤖 Auto Cast OFF
+    </button>
+
+    <button class="cast-btn"
+      onclick="openRedeem()"
+      style="background:linear-gradient(135deg,#f59e0b,#b45309);padding:14px 22px">
+      🎁
+    </button>
+  </div>
+</div>
 
   <!-- BEST FISH + LEADERBOARD -->
   <div class="tcol">
@@ -310,14 +325,49 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   </div>
 
 </div>
+<!-- REDEEM POPUP -->
+<div id="redeemPopup" style="display:none;position:fixed;inset:0;background:#00000088;z-index:999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#111d30;border:1px solid #1e3050;border-radius:16px;padding:20px;width:100%;max-width:320px">
 
+    <div style="font-size:20px;font-weight:800;margin-bottom:12px;color:#ffd700;text-align:center">
+      🎁 Redeem Code
+    </div>
+
+    <input
+      id="redeemInput"
+      type="text"
+      placeholder="Masukkan code"
+      style="width:100%;padding:12px;border-radius:10px;border:1px solid #1e3050;background:#0a1520;color:white;outline:none;margin-bottom:10px"
+    >
+
+    <button
+      onclick="redeemCode()"
+      class="cast-btn"
+      style="width:100%;margin-bottom:8px"
+    >
+      Claim Reward
+    </button>
+
+    <button
+      onclick="closeRedeem()"
+      class="cast-btn"
+      style="width:100%;background:#374151"
+    >
+      Tutup
+    </button>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ═══════════════════════════════════
 // SUPABASE
 // ═══════════════════════════════════
 const SUPA_URL = 'https://xkpaaqppvmpfzkpnlpmk.supabase.co';
 const SUPA_KEY = 'sb_publishable_YAb7XAfrTsrKfIM8GdVIgQ_r7bVFhXw';
-// const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+ const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
 
 // ═══════════════════════════════════
 // BIOMES
@@ -464,6 +514,8 @@ let G = {
 };
 let CU = null;
 let casting = false;
+let autoCast = false;
+let autoCastInterval = null;
 let lbTimerIv = null, lbSecs = 60;
 
 function fishScore(f){ return f.rarity.score * 100000 + f.roll; }
@@ -858,6 +910,93 @@ function startLBTimer(){
 function stopLBTimer(){clearInterval(lbTimerIv);lbTimerIv=null;}
 
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+// ═══════════════════════════════════
+// AUTO CAST
+// ═══════════════════════════════════
+function toggleAutoCast(){
+  autoCast = !autoCast;
+
+  const btn = document.getElementById('autoBtn');
+
+  if(autoCast){
+    btn.textContent = '🤖 Auto Cast ON';
+    btn.style.background = 'linear-gradient(135deg,#22c55e,#166534)';
+
+    autoCastInterval = setInterval(()=>{
+      if(!casting){
+        doCast();
+      }
+    }, 1800);
+
+    document.getElementById('logLine').textContent = '🤖 Auto Cast diaktifkan';
+
+  }else{
+    btn.textContent = '🤖 Auto Cast OFF';
+    btn.style.background = 'linear-gradient(135deg,#22c55e,#15803d)';
+
+    clearInterval(autoCastInterval);
+
+    document.getElementById('logLine').textContent = '🛑 Auto Cast dimatikan';
+  }
+}
+
+// ═══════════════════════════════════
+// REDEEM SYSTEM
+// ═══════════════════════════════════
+function openRedeem(){
+  document.getElementById('redeemPopup').style.display = 'flex';
+}
+
+function closeRedeem(){
+  document.getElementById('redeemPopup').style.display = 'none';
+}
+
+async function redeemCode(){
+  const code = document.getElementById('redeemInput').value.trim().toLowerCase();
+
+  if(!code){
+    alert('Masukkan code');
+    return;
+  }
+
+  const { data: existing } = await sb
+    .from('redeem_claims')
+    .select('id')
+    .eq('user_id', CU.id)
+    .eq('code', code)
+    .maybeSingle();
+
+  if(existing){
+    alert('Code sudah pernah dipakai');
+    return;
+  }
+
+  if(code === 'freecoin'){
+
+    G.coins += 50000;
+
+    await sb
+      .from('redeem_claims')
+      .insert({
+        user_id: CU.id,
+        code: code
+      });
+
+    updateStats();
+    scheduleSave();
+
+    alert('🎉 Redeem berhasil! +50,000 coin');
+
+    closeRedeem();
+
+    document.getElementById('redeemInput').value = '';
+
+    return;
+  }
+
+  alert('Code tidak valid');
+}
+
 </script>
 </body>
 </html>
