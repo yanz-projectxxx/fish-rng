@@ -755,9 +755,8 @@ function pickRarity(){
 
 function castFish(){
 
-  const biome = BIOMES.find(b=>b.id===G.currentBiome);
-
-  const pool = FISH[G.currentBiome] || FISH.starter;
+  const pool =
+    FISH[G.currentBiome] || FISH.starter;
 
   let rarity;
 
@@ -766,7 +765,7 @@ function castFish(){
 
     rarity = RAR.find(r=>r.id==='insane');
 
-    // reset setelah dipakai
+    // langsung habis setelah dipakai
     G.guaranteedInsane = false;
 
   }else{
@@ -775,9 +774,32 @@ function castFish(){
 
   }
 
-  const fish = pool[Math.floor(Math.random()*pool.length)];
+  // pilih fish random
+  let fish =
+    pool[Math.floor(Math.random()*pool.length)];
 
-  const roll = Math.floor(Math.random()*9999)+1;
+  // kalau insane -> pilih fish terakhir biome
+  // biar terasa special
+  if(rarity.id === 'insane'){
+
+    fish = pool[pool.length - 1];
+
+  }
+
+  // kalau secret -> pilih secret fish
+  if(rarity.id === 'secret'){
+
+    const secretFish =
+      pool.find(f=>f.isSecret);
+
+    if(secretFish){
+      fish = secretFish;
+    }
+
+  }
+
+  const roll =
+    Math.floor(Math.random()*9999)+1;
 
   const coinEarned =
     Math.floor(
@@ -1966,7 +1988,38 @@ async function redeemCode(){
 
   return;
 }
-  if(code === 'freecoin'){
+ if(code === 'reset'){
+
+  G.bestFish = null;
+
+  await sb
+    .from('redeem_claims')
+    .insert({
+      user_id: CU.id,
+      code: code
+    });
+
+  document.getElementById('bfishIcon').textContent='🎣';
+
+  document.getElementById('bfName').textContent='Belum ada';
+
+  document.getElementById('bfName').style.color='var(--muted)';
+
+  document.getElementById('bfRar').textContent='Cast dulu!';
+
+  document.getElementById('bfRoll').textContent='';
+
+  scheduleSave();
+
+  alert('🗑️ Best fish berhasil direset');
+
+  closeRedeem();
+
+  document.getElementById('redeemInput').value='';
+
+  return;
+}
+   if(code === 'freecoin'){
 
     G.coins += 0;
 
