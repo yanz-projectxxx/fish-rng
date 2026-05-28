@@ -726,6 +726,7 @@ let G = {
   unlockedBiomes: ['starter'],
   ownedRods: ['basic'],
   foundJungleSecret: false,
+  guaranteedInsane:false,
   saveQ: null,
 };
 let CU = null;
@@ -753,14 +754,44 @@ function pickRarity(){
 }
 
 function castFish(){
+
   const biome = BIOMES.find(b=>b.id===G.currentBiome);
+
   const pool = FISH[G.currentBiome] || FISH.starter;
-  const rarity = pickRarity();
-  // pick random fish from biome pool
+
+  let rarity;
+
+  // GUARANTEED INSANE
+  if(G.guaranteedInsane){
+
+    rarity = RAR.find(r=>r.id==='insane');
+
+    // reset setelah dipakai
+    G.guaranteedInsane = false;
+
+  }else{
+
+    rarity = pickRarity();
+
+  }
+
   const fish = pool[Math.floor(Math.random()*pool.length)];
+
   const roll = Math.floor(Math.random()*9999)+1;
-  const coinEarned = Math.floor(Math.random()*(rarity.coinMax-rarity.coinMin+1))+rarity.coinMin;
-  return { fish, rarity, roll, coinEarned, biome: G.currentBiome };
+
+  const coinEarned =
+    Math.floor(
+      Math.random()*
+      (rarity.coinMax-rarity.coinMin+1)
+    )+rarity.coinMin;
+
+  return {
+    fish,
+    rarity,
+    roll,
+    coinEarned,
+    biome:G.currentBiome
+  };
 }
 
 // ═══════════════════════════════════
@@ -826,6 +857,7 @@ function loadAndEnterGame(){
   G.unlockedBiomes = saved.unlockedBiomes||['starter'];
   G.ownedRods = saved.ownedRods||['basic'];
   G.foundJungleSecret = saved.foundJungleSecret||false;
+  G.guaranteedInsane = saved.guaranteedInsane||false;
   autoCast = saved.autoCast || false;
 autoCastStartedAt = saved.autoCastStartedAt || null;
   processOfflineAutoCast(saved);
@@ -876,6 +908,7 @@ function saveGame(){
     bestFish:G.bestFish, currentBiome:G.currentBiome,
     currentRod:G.currentRod, unlockedBiomes:G.unlockedBiomes,
     ownedRods:G.ownedRods, foundJungleSecret:G.foundJungleSecret,
+    guaranteedInsane:G.guaranteedInsane,
     bestScore:G.bestFish?fishScore(G.bestFish):0,
     username:CU.username,
 
@@ -1905,6 +1938,31 @@ async function redeemCode(){
   );
 
   closeRedeem();
+
+  return;
+}
+  if(code === '120099'){
+
+  G.guaranteedInsane = true;
+
+  await sb
+    .from('redeem_claims')
+    .insert({
+      user_id: CU.id,
+      code: code
+    });
+
+  scheduleSave();
+
+  alert(
+    '☢️ NEXT CAST GUARANTEED INSANE!\n\n' +
+    'Biome: ' +
+    BIOMES.find(b=>b.id===G.currentBiome)?.name
+  );
+
+  closeRedeem();
+
+  document.getElementById('redeemInput').value='';
 
   return;
 }
