@@ -775,6 +775,7 @@ async function doCast(){
   if(!G.bestFish || score > fishScore(G.bestFish)){
     G.bestFish = result;
     renderBestFish();
+updateLeaderboard();
   }
 
   // Display fish card
@@ -946,41 +947,122 @@ function updateStats(){
 }
 
 // ═══════════════════════════════════
-// LEADERBOARD — localStorage
+// LEADERBOARD — SUPABASE REALTIME
 // ═══════════════════════════════════
 const MEDALS=['🥇','🥈','🥉','4️⃣','5️⃣'];
-function loadLB(){
-  const c=document.getElementById('lbCont');
+
+async function updateLeaderboard(){
+
+  if(!CU || !G.bestFish) return;
+
+  const bf = G.bestFish;
+
+  await sb
+    .from('leaderboard')
+    .upsert({
+      user_id: CU.id,
+
+      username: CU.username,
+
+      fish_name: bf.fish.n,
+      fish_icon: bf.fish.i,
+
+      rarity: bf.rarity.name,
+      rarity_color: bf.rarity.color,
+
+      roll: bf.roll,
+
+      best_score: fishScore(bf),
+
+      updated_at: new Date().toISOString()
+    });
+}
+
+async function loadLB(){
+
+  const c = document.getElementById('lbCont');
+
+  c.innerHTML =
+    '<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">Loading...</div>';
+
+  const { data, error } = await sb
+    .from('leaderboard')
+    .select('*')
+    .order('best_score', { ascending:false })
+    .limit(5);
+
+  if(error){
+    c.innerHTML =
+      '<div style="color:red;font-size:11px;text-align:center;padding:10px">Failed load leaderboard</div>';
+    return;
+  }
+
   c.innerHTML='';
-  const lb=JSON.parse(localStorage.getItem('fishing_lb')||'{}');
-  const entries=Object.values(lb).sort((a,b)=>b.bestScore-a.bestScore).slice(0,5);
-  if(!entries.length){c.innerHTML='<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">Belum ada data</div>';return;}
-  entries.forEach((row,i)=>{
-    const bf=row.bestFish;
-    const r=bf?.rarity,f=bf?.fish;
-    const col=r?r.color:'#8899aa';
-    const d=document.createElement('div');d.className='lbrow';
-    d.innerHTML=`<div class="lbrank">${MEDALS[i]||i+1}</div>
-      <div class="lbname">${esc(row.username||'?')}</div>
-      <div class="lbfish" style="background:${col}18;color:${col};border:1px solid ${col}28">
-        ${f?.i||'🎣'} ${esc(f?.n||'—')} · ${esc(r?.name||'—')}
+
+  if(!data.length){
+    c.innerHTML =
+      '<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">Belum ada data</div>';
+    return;
+  }
+
+  data.forEach((row,i)=>{
+
+    const col = row.rarity_color || '#8899aa';
+
+    const d = document.createElement('div');
+
+    d.className='lbrow';
+
+    d.innerHTML=`
+      <div class="lbrank">${MEDALS[i]||i+1}</div>
+
+      <div class="lbname">
+        ${esc(row.username||'?')}
       </div>
-      <div class="lbsc">${(row.bestScore||0).toLocaleString()}</div>`;
+
+      <div class="lbfish"
+        style="
+          background:${col}18;
+          color:${col};
+          border:1px solid ${col}28
+        ">
+        ${row.fish_icon||'🎣'}
+        ${esc(row.fish_name||'—')}
+        ·
+        ${esc(row.rarity||'—')}
+      </div>
+
+      <div class="lbsc">
+        ${(row.best_score||0).toLocaleString()}
+      </div>
+    `;
+
     c.appendChild(d);
   });
 }
 
 function startLBTimer(){
-  stopLBTimer();
-  lbSecs=60;
-  lbTimerIv=setInterval(()=>{
-    lbSecs--;
-    if(lbSecs<=0){lbSecs=60;loadLB();}
-  },1000);
-}
-function stopLBTimer(){clearInterval(lbTimerIv);lbTimerIv=null;}
 
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  stopLBTimer();
+
+  loadLB();
+
+  lbTimerIv = setInterval(()=>{
+    loadLB();
+  },5000);
+}
+
+function stopLBTimer(){
+  clearInterval(lbTimerIv);
+  lbTimerIv=null;
+}
+
+function esc(s){
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+}
 // ═══════════════════════════════════
 // AUTO CAST
 // ═══════════════════════════════════
