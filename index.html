@@ -516,6 +516,7 @@ let CU = null;
 let casting = false;
 let autoCast = false;
 let autoCastInterval = null;
+let autoCastStartedAt = null;
 let lbTimerIv = null, lbSecs = 60;
 
 function fishScore(f){ return f.rarity.score * 100000 + f.roll; }
@@ -609,7 +610,17 @@ function loadAndEnterGame(){
   G.unlockedBiomes = saved.unlockedBiomes||['starter'];
   G.ownedRods = saved.ownedRods||['basic'];
   G.foundJungleSecret = saved.foundJungleSecret||false;
-  enterGame();
+  autoCast = saved.autoCast || false;
+autoCastStartedAt = saved.autoCastStartedAt || null;
+  processOfflineAutoCast(saved);
+enterGame();
+
+if(autoCast){
+  setTimeout(()=>{
+    toggleAutoCast();
+    toggleAutoCast();
+  },200);
+}
 }
 
 function enterGame(){
@@ -650,6 +661,10 @@ function saveGame(){
     ownedRods:G.ownedRods, foundJungleSecret:G.foundJungleSecret,
     bestScore:G.bestFish?fishScore(G.bestFish):0,
     username:CU.username,
+
+autoCast:autoCast,
+autoCastStartedAt:autoCastStartedAt,
+lastOnline:Date.now(),
   }));
   // Update global leaderboard data
   const lb = JSON.parse(localStorage.getItem('fishing_lb')||'{}');
@@ -663,6 +678,62 @@ function saveGame(){
 }
 function scheduleSave(){ clearTimeout(G.saveQ); G.saveQ=setTimeout(saveGame,2000); }
 
+function processOfflineAutoCast(saved){
+
+  if(!saved.autoCast) return;
+
+  if(!saved.lastOnline) return;
+
+  const offlineMs = Date.now() - saved.lastOnline;
+
+  const offlineSeconds = Math.floor(offlineMs / 1000);
+
+  // 1 cast tiap 1.8 detik
+  const totalCasts = Math.floor(offlineSeconds / 1.8);
+
+  if(totalCasts <= 0) return;
+
+  let totalCoins = 0;
+  let rareCount = 0;
+
+  for(let i=0;i<totalCasts;i++){
+
+    const result = castFish();
+
+    totalCoins += result.coinEarned;
+
+    if(result.rarity.score >= 20){
+      rareCount++;
+    }
+
+    if(
+      result.fish.isSecret &&
+      result.biome === 'jungle' &&
+      !G.foundJungleSecret
+    ){
+      G.foundJungleSecret = true;
+    }
+
+    const score = fishScore(result);
+
+    if(
+      !G.bestFish ||
+      score > fishScore(G.bestFish)
+    ){
+      G.bestFish = result;
+    }
+  }
+
+  G.casts += totalCasts;
+  G.coins += totalCoins;
+  G.rares += rareCount;
+
+  alert(
+    '🤖 Auto Cast Offline\\n\\n' +
+    'Cast: ' + totalCasts.toLocaleString() +
+    '\\nCoin: +' + totalCoins.toLocaleString()
+  );
+}
 // ═══════════════════════════════════
 // CAST
 // ═══════════════════════════════════
@@ -914,30 +985,44 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 // AUTO CAST
 // ═══════════════════════════════════
 function toggleAutoCast(){
+
   autoCast = !autoCast;
 
   const btn = document.getElementById('autoBtn');
 
   if(autoCast){
+
+    autoCastStartedAt = Date.now();
+
     btn.textContent = '🤖 Auto Cast ON';
-    btn.style.background = 'linear-gradient(135deg,#22c55e,#166534)';
+    btn.style.background =
+      'linear-gradient(135deg,#22c55e,#166534)';
 
     autoCastInterval = setInterval(()=>{
+
       if(!casting){
         doCast();
       }
-    }, 1800);
 
-    document.getElementById('logLine').textContent = '🤖 Auto Cast diaktifkan';
+    },1800);
+
+    document.getElementById('logLine').textContent =
+      '🤖 Auto Cast diaktifkan';
 
   }else{
+
     btn.textContent = '🤖 Auto Cast OFF';
-    btn.style.background = 'linear-gradient(135deg,#22c55e,#15803d)';
+
+    btn.style.background =
+      'linear-gradient(135deg,#22c55e,#15803d)';
 
     clearInterval(autoCastInterval);
 
-    document.getElementById('logLine').textContent = '🛑 Auto Cast dimatikan';
+    document.getElementById('logLine').textContent =
+      '🛑 Auto Cast dimatikan';
   }
+
+  scheduleSave();
 }
 
 // ═══════════════════════════════════
