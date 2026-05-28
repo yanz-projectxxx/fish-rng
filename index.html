@@ -227,7 +227,46 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
   position:relative;
   z-index:2;
   text-align:center;
-  animation:cutPop .7s cubic-bezier(.34,1.56,.64,1);
+
+  transform:
+    perspective(1000px)
+    rotateX(80deg)
+    translateY(300px)
+    scale(.4);
+
+  opacity:0;
+
+  animation:
+    cinematicRise 2s cubic-bezier(.22,1,.36,1)
+    forwards;
+}
+
+@keyframes cinematicRise{
+
+  0%{
+    opacity:0;
+
+    transform:
+      perspective(1000px)
+      rotateX(80deg)
+      translateY(300px)
+      scale(.4);
+  }
+
+  60%{
+    opacity:1;
+  }
+
+  100%{
+
+    opacity:1;
+
+    transform:
+      perspective(1000px)
+      rotateX(0deg)
+      translateY(0)
+      scale(1);
+  }
 }
 
 @keyframes cutPop{
@@ -265,10 +304,44 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 }
 
 .cut-fish{
-  font-size:120px;
-  margin:20px 0;
-  filter:drop-shadow(0 0 30px #fff);
-  animation:floatFish 2s ease-in-out infinite;
+
+  font-size:140px;
+
+  margin:25px 0;
+
+  filter:
+    drop-shadow(0 0 20px #fff)
+    drop-shadow(0 0 50px currentColor);
+
+  animation:
+    fishSpin 4s linear infinite,
+    fishFloat 2s ease-in-out infinite;
+}
+
+@keyframes fishSpin{
+
+  from{
+    transform:
+      rotateY(0deg)
+      rotateZ(0deg);
+  }
+
+  to{
+    transform:
+      rotateY(360deg)
+      rotateZ(360deg);
+  }
+}
+
+@keyframes fishFloat{
+
+  0%,100%{
+    translate:0 0;
+  }
+
+  50%{
+    translate:0 -25px;
+  }
 }
 
 @keyframes floatFish{
@@ -924,12 +997,12 @@ updateLeaderboard();
 
   // Display fish card
   displayFishCard(result);
-  if(
+
+if(
   result.rarity.id === 'secret' ||
-  result.rarity.id === 'insane' ||
-  testCutscene
+  result.rarity.id === 'insane'
 ){
-  showCutscene(result);
+  playUltraCutscene(result);
 }
   document.getElementById('logLine').textContent =
     (CAST_MSGS[result.rarity.id]||'Ikan ditemukan!')
@@ -963,6 +1036,442 @@ function displayFishCard(result){
 }
 
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ═══════════════════════════════════
+// ULTRA SECRET / INSANE CUTSCENE
+// ═══════════════════════════════════
+function playUltraCutscene(result){
+
+  const old = document.getElementById('ultraCutscene');
+  if(old) old.remove();
+
+  const rarity = result.rarity.id;
+
+  const isInsane = rarity === 'insane';
+
+  const mainColor = isInsane
+    ? '#ff5522'
+    : '#aa44ff';
+
+  const glowColor = isInsane
+    ? '#ff2200'
+    : '#bb55ff';
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ultraCutscene';
+
+  overlay.innerHTML = `
+  <div class="ultra-bg"></div>
+
+  <div class="ultra-flash"></div>
+
+  <div class="ultra-vignette"></div>
+
+  <div class="ultra-rays"></div>
+
+  <div class="ultra-ring ultra-ring1"></div>
+  <div class="ultra-ring ultra-ring2"></div>
+  <div class="ultra-ring ultra-ring3"></div>
+
+  <div class="ultra-particles"></div>
+
+  <div class="ultra-shake">
+
+    <div class="ultra-content">
+
+      <div class="ultra-rarity">
+        ${isInsane ? '☢️ INSANE ☢️' : '✦ SECRET ✦'}
+      </div>
+
+      <div class="ultra-fish-wrap">
+
+        <div class="ultra-glow"></div>
+
+        <div class="ultra-fish">
+          ${result.fish.i}
+        </div>
+
+      </div>
+
+      <div class="ultra-name">
+        ${result.fish.n}
+      </div>
+
+      <div class="ultra-roll">
+        1:${result.roll.toLocaleString()}
+      </div>
+
+      <div class="ultra-desc">
+        ${isInsane
+          ? 'UNBELIEVABLE CATCH'
+          : 'A SECRET ENTITY HAS APPEARED'}
+      </div>
+
+    </div>
+
+  </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  // PARTICLES
+  const particleWrap = overlay.querySelector('.ultra-particles');
+
+  for(let i=0;i<80;i++){
+
+    const p = document.createElement('div');
+
+    p.style.position = 'absolute';
+
+    p.style.width =
+      (Math.random()*8+2)+'px';
+
+    p.style.height =
+      p.style.width;
+
+    p.style.borderRadius = '999px';
+
+    p.style.background = mainColor;
+
+    p.style.left = Math.random()*100+'%';
+
+    p.style.top = Math.random()*100+'%';
+
+    p.style.opacity = Math.random();
+
+    p.style.filter = 'blur(1px)';
+
+    p.style.animation =
+      `particleFloat ${4+Math.random()*4}s linear infinite`;
+
+    p.style.animationDelay =
+      Math.random()*5+'s';
+
+    particleWrap.appendChild(p);
+  }
+
+  // STYLE
+  const style = document.createElement('style');
+
+  style.innerHTML = `
+
+  #ultraCutscene{
+    position:fixed;
+    inset:0;
+    z-index:999999;
+    overflow:hidden;
+    animation:fadeIn .4s ease;
+    background:#000;
+    font-family:'Syne',sans-serif;
+  }
+
+  .ultra-bg{
+    position:absolute;
+    inset:0;
+    background:
+      radial-gradient(circle at center,
+      ${mainColor}55 0%,
+      #000 70%);
+    animation:bgPulse 3s ease-in-out infinite;
+  }
+
+  .ultra-flash{
+    position:absolute;
+    inset:0;
+    background:white;
+    opacity:0;
+    animation:flashBang 1.2s ease;
+  }
+
+  .ultra-vignette{
+    position:absolute;
+    inset:0;
+    box-shadow:inset 0 0 200px #000;
+  }
+
+  .ultra-rays{
+    position:absolute;
+    width:200vw;
+    height:200vw;
+    left:-50vw;
+    top:-50vw;
+    background:
+      repeating-conic-gradient(
+        from 0deg,
+        ${mainColor}22 0deg,
+        transparent 10deg,
+        transparent 20deg
+      );
+    animation:spinRays 18s linear infinite;
+  }
+
+  .ultra-ring{
+    position:absolute;
+    left:50%;
+    top:50%;
+    border-radius:999px;
+    border:2px solid ${mainColor};
+    transform:translate(-50%,-50%);
+    opacity:.4;
+  }
+
+  .ultra-ring1{
+    width:250px;
+    height:250px;
+    animation:ringPulse 3s infinite;
+  }
+
+  .ultra-ring2{
+    width:450px;
+    height:450px;
+    animation:ringPulse 3s infinite .4s;
+  }
+
+  .ultra-ring3{
+    width:650px;
+    height:650px;
+    animation:ringPulse 3s infinite .8s;
+  }
+
+  .ultra-shake{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    animation:cameraShake .12s infinite;
+  }
+
+  .ultra-content{
+    text-align:center;
+    transform:translateY(100px);
+    animation:cameraRise 1.8s cubic-bezier(.17,.89,.32,1.28) forwards;
+  }
+
+  .ultra-rarity{
+    font-size:54px;
+    font-weight:900;
+    color:white;
+    text-shadow:
+      0 0 10px ${mainColor},
+      0 0 30px ${mainColor},
+      0 0 70px ${mainColor};
+    letter-spacing:6px;
+    margin-bottom:20px;
+    animation:rarityPulse 1.5s infinite;
+  }
+
+  .ultra-fish-wrap{
+    position:relative;
+    width:260px;
+    height:260px;
+    margin:auto;
+  }
+
+  .ultra-glow{
+    position:absolute;
+    inset:0;
+    border-radius:999px;
+    background:
+      radial-gradient(circle,
+      ${mainColor}99 0%,
+      transparent 70%);
+    filter:blur(30px);
+    animation:glowPulse 2s infinite;
+  }
+
+  .ultra-fish{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:180px;
+    animation:
+      fishSpin 8s linear infinite,
+      fishFloat 2s ease-in-out infinite;
+    filter:
+      drop-shadow(0 0 25px ${glowColor})
+      drop-shadow(0 0 80px ${glowColor});
+  }
+
+  .ultra-name{
+    margin-top:25px;
+    font-size:42px;
+    font-weight:900;
+    color:white;
+    text-shadow:
+      0 0 15px ${mainColor};
+    animation:textGlow 2s infinite;
+  }
+
+  .ultra-roll{
+    margin-top:10px;
+    font-size:22px;
+    color:#ffffffcc;
+    font-family:'Space Mono',monospace;
+    letter-spacing:2px;
+  }
+
+  .ultra-desc{
+    margin-top:18px;
+    font-size:14px;
+    color:#ffffffaa;
+    letter-spacing:5px;
+  }
+
+  @keyframes cameraRise{
+    from{
+      opacity:0;
+      transform:
+        translateY(220px)
+        scale(.5);
+      filter:blur(20px);
+    }
+    to{
+      opacity:1;
+      transform:
+        translateY(0)
+        scale(1);
+      filter:none;
+    }
+  }
+
+  @keyframes fishSpin{
+    from{
+      transform:rotateY(0deg) rotateZ(0deg);
+    }
+    to{
+      transform:rotateY(360deg) rotateZ(360deg);
+    }
+  }
+
+  @keyframes fishFloat{
+    0%,100%{
+      transform:translateY(0px);
+    }
+    50%{
+      transform:translateY(-18px);
+    }
+  }
+
+  @keyframes glowPulse{
+    0%,100%{
+      transform:scale(1);
+      opacity:.7;
+    }
+    50%{
+      transform:scale(1.25);
+      opacity:1;
+    }
+  }
+
+  @keyframes rarityPulse{
+    0%,100%{
+      transform:scale(1);
+    }
+    50%{
+      transform:scale(1.08);
+    }
+  }
+
+  @keyframes ringPulse{
+    0%{
+      transform:
+        translate(-50%,-50%)
+        scale(.5);
+      opacity:.9;
+    }
+    100%{
+      transform:
+        translate(-50%,-50%)
+        scale(1.4);
+      opacity:0;
+    }
+  }
+
+  @keyframes spinRays{
+    from{
+      transform:rotate(0deg);
+    }
+    to{
+      transform:rotate(360deg);
+    }
+  }
+
+  @keyframes particleFloat{
+    from{
+      transform:
+        translateY(40px)
+        scale(.5);
+      opacity:0;
+    }
+    20%{
+      opacity:1;
+    }
+    to{
+      transform:
+        translateY(-120vh)
+        scale(1.4);
+      opacity:0;
+    }
+  }
+
+  @keyframes flashBang{
+    0%{
+      opacity:1;
+    }
+    100%{
+      opacity:0;
+    }
+  }
+
+  @keyframes bgPulse{
+    0%,100%{
+      filter:brightness(1);
+    }
+    50%{
+      filter:brightness(1.4);
+    }
+  }
+
+  @keyframes textGlow{
+    0%,100%{
+      letter-spacing:1px;
+    }
+    50%{
+      letter-spacing:3px;
+    }
+  }
+
+  @keyframes cameraShake{
+    0%{transform:translate(0,0)}
+    25%{transform:translate(2px,-2px)}
+    50%{transform:translate(-2px,2px)}
+    75%{transform:translate(2px,2px)}
+    100%{transform:translate(0,0)}
+  }
+
+  @keyframes fadeIn{
+    from{opacity:0}
+    to{opacity:1}
+  }
+
+  `;
+
+  overlay.appendChild(style);
+
+  // AUTO CLOSE
+  setTimeout(()=>{
+    overlay.style.transition = 'opacity .8s ease';
+    overlay.style.opacity = '0';
+
+    setTimeout(()=>{
+      overlay.remove();
+    },800);
+
+  },8500);
+}
 
 // ═══════════════════════════════════
 // BIOMES
@@ -1098,82 +1607,45 @@ function updateStats(){
 }
 
 // ═══════════════════════════════════
-// LEADERBOARD — SUPABASE REALTIME
+// LEADERBOARD
 // ═══════════════════════════════════
 const MEDALS=['🥇','🥈','🥉','4️⃣','5️⃣'];
 
-async function updateLeaderboard(){
-
-  if(!CU || !G.bestFish) return;
-
-  const bf = G.bestFish;
-
-  const payload = {
-    user_id: CU.id,
-
-    username: CU.username,
-
-    fish_name: bf.fish.n,
-    fish_icon: bf.fish.i,
-
-    rarity: bf.rarity.name,
-    rarity_color: bf.rarity.color,
-
-    roll: bf.roll,
-
-    best_score: fishScore(bf),
-
-    updated_at: new Date().toISOString()
-  };
-
-  console.log('UPLOAD LB', payload);
-
-  const { error } = await sb
-    .from('leaderboard')
-    .upsert(payload);
-
-  if(error){
-    console.error(error);
-  }
-}
-
 async function loadLB(){
 
-  const c = document.getElementById('lbCont');
+  const c=document.getElementById('lbCont');
 
-  c.innerHTML =
+  c.innerHTML=
     '<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">Loading...</div>';
 
-  const { data, error } = await sb
+  const { data,error } = await sb
     .from('leaderboard')
     .select('*')
-    .order('best_score', { ascending:false })
+    .order('best_score',{ascending:false})
     .limit(5);
 
-  if(error){
-    c.innerHTML =
-      '<div style="color:red;font-size:11px;text-align:center;padding:10px">Failed load leaderboard</div>';
+  if(error || !data?.length){
+
+    c.innerHTML=
+      '<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">Belum ada data</div>';
+
     return;
   }
 
   c.innerHTML='';
 
-  if(!data.length){
-    c.innerHTML =
-      '<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">Belum ada data</div>';
-    return;
-  }
-
   data.forEach((row,i)=>{
 
-    const col = row.rarity_color || '#8899aa';
+    const col=row.rarity_color||'#9090b0';
 
-    const d = document.createElement('div');
+    const d=document.createElement('div');
 
     d.className='lbrow';
 
     d.innerHTML=`
-      <div class="lbrank">${MEDALS[i]||i+1}</div>
+      <div class="lbrank">
+        ${MEDALS[i]||i+1}
+      </div>
 
       <div class="lbname">
         ${esc(row.username||'?')}
@@ -1200,27 +1672,88 @@ async function loadLB(){
   });
 }
 
-function startLBTimer(){
-
-  stopLBTimer();
-
-  loadLB();
-
-  lbTimerIv = setInterval(()=>{
-    loadLB();
-  },5000);
-}
-
-function stopLBTimer(){
-  clearInterval(lbTimerIv);
-  lbTimerIv=null;
-}
-
 function esc(s){
   return String(s)
     .replace(/&/g,'&amp;')
     .replace(/</g,'&lt;')
     .replace(/>/g,'&gt;');
+}
+
+// ═══════════════════════════════════
+// AUTO REFRESH
+// ═══════════════════════════════════
+async function silentLoadLB(){
+
+  const { data,error } = await sb
+    .from('leaderboard')
+    .select('*')
+    .order('best_score',{ascending:false})
+    .limit(5);
+
+  if(error || !data?.length)return;
+
+  const c=document.getElementById('lbCont');
+
+  c.innerHTML='';
+
+  data.forEach((row,i)=>{
+
+    const col=row.rarity_color||'#9090b0';
+
+    const d=document.createElement('div');
+
+    d.className='lbrow';
+
+    d.innerHTML=`
+      <div class="lbrank">
+        ${MEDALS[i]||i+1}
+      </div>
+
+      <div class="lbname">
+        ${esc(row.username||'?')}
+      </div>
+
+      <div class="lbfish"
+        style="
+          background:${col}18;
+          color:${col};
+          border:1px solid ${col}28
+        ">
+        ${row.fish_icon||'🎣'}
+        ${esc(row.fish_name||'—')}
+        ·
+        ${esc(row.rarity||'—')}
+      </div>
+
+      <div class="lbsc">
+        ${(row.best_score||0).toLocaleString()}
+      </div>
+    `;
+
+    c.appendChild(d);
+  });
+}
+
+let autoRefIv=null;
+
+function startLBTimer(){
+
+  if(autoRefIv)clearInterval(autoRefIv);
+
+  autoRefIv=setInterval(()=>{
+
+    if(!CU)return;
+
+    silentLoadLB();
+
+  },5000);
+}
+
+function stopLBTimer(){
+
+  clearInterval(autoRefIv);
+
+  autoRefIv=null;
 }
 // ═══════════════════════════════════
 // CUTSCENE
@@ -1255,7 +1788,16 @@ function showCutscene(result){
     'Roll: 1/' + result.roll.toLocaleString();
 
   wrap.style.display = 'flex';
-
+document.body.animate(
+  [
+    { filter:'brightness(1)' },
+    { filter:'brightness(2.5)' },
+    { filter:'brightness(1)' }
+  ],
+  {
+    duration:900
+  }
+);
   // sound flash vibration
   if(navigator.vibrate){
     navigator.vibrate([200,100,200,100,300]);
