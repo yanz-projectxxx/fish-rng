@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>🎣 RNG Fishing</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+:root{
+  --bg:#060b12;--bg2:#0a1220;--bg3:#0f1a2e;--card:#111d30;--bd:#1e3050;
+  --acc:#00d4ff;--acc2:#0099cc;--gold:#ffd700;--text:#d0e8ff;--muted:#4a6a8a;
+  --ok:#00ff88;--err:#ff4455;--rare:#aa44ff;
+  /* Biome colors */
+  --starter:#00aaff;--jungle:#22cc44;--cave:#8844ff;--abyss:#0044aa;--sky:#ffaa00;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:2px}
+
+/* ─── AUTH ─── */
+#authPage{min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 30%,#0a2040 0%,var(--bg) 70%);position:relative;overflow:hidden}
+#authPage::before{content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Ccircle cx='30' cy='30' r='1' fill='%23ffffff08'/%3E%3C/svg%3E");
+  animation:drift 20s linear infinite}
+@keyframes drift{from{transform:translate(0,0)}to{transform:translate(-60px,-60px)}}
+.abox{background:rgba(10,18,32,.95);border:1px solid var(--bd);border-radius:20px;
+  padding:40px 36px;width:360px;position:relative;z-index:1;
+  box-shadow:0 0 60px #00d4ff10,0 0 120px #0044aa08}
+.alogo{text-align:center;font-size:52px;margin-bottom:6px;animation:bobfish 3s ease-in-out infinite}
+@keyframes bobfish{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.atitle{text-align:center;font-size:24px;font-weight:800;color:var(--acc);margin-bottom:2px;letter-spacing:.04em}
+.asub{text-align:center;font-size:11px;color:var(--muted);margin-bottom:28px;font-family:'Space Mono',monospace}
+.tabs{display:flex;border-radius:10px;overflow:hidden;border:1px solid var(--bd);margin-bottom:20px}
+.tab{flex:1;padding:10px;background:none;color:var(--muted);border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:'Syne',sans-serif;transition:.2s}
+.tab.on{background:var(--acc);color:#000}
+.fg{margin-bottom:13px}
+.fg label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
+.fg input{width:100%;padding:10px 13px;border-radius:9px;border:1px solid var(--bd);background:#0a1520;color:var(--text);font-size:14px;outline:none;transition:border .2s;font-family:'Syne',sans-serif}
+.fg input:focus{border-color:var(--acc);box-shadow:0 0 0 3px #00d4ff18}
+.abtn{width:100%;padding:12px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#000;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px;transition:opacity .15s,transform .1s;font-family:'Syne',sans-serif;letter-spacing:.04em}
+.abtn:hover{opacity:.88}.abtn:active{transform:scale(.98)}.abtn:disabled{opacity:.4;cursor:not-allowed}
+.amsg{margin-top:10px;font-size:11px;text-align:center;min-height:15px;font-family:'Space Mono',monospace}
+.amsg.err{color:var(--err)}.amsg.ok{color:var(--ok)}
+
+/* ─── GAME ─── */
+#gamePage{display:none;max-width:1000px;margin:0 auto;padding:12px}
+
+/* ─── NAV ─── */
+.nav{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;
+  background:var(--card);border-radius:14px;border:1px solid var(--bd);margin-bottom:10px;
+  backdrop-filter:blur(10px)}
+.nlogo{font-size:17px;font-weight:800;color:var(--acc);letter-spacing:.04em}
+.nright{display:flex;align-items:center;gap:10px}
+.nuser{font-size:12px;color:var(--muted);font-family:'Space Mono',monospace}
+.nuser b{color:var(--acc)}
+.coin-badge{background:linear-gradient(135deg,#2a2000,#1a1400);border:1px solid var(--gold);
+  border-radius:8px;padding:5px 11px;font-size:13px;font-weight:700;color:var(--gold);
+  font-family:'Space Mono',monospace}
+.lgbtn{padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:none;color:var(--muted);font-size:11px;cursor:pointer;transition:.2s;font-family:'Syne',sans-serif}
+.lgbtn:hover{border-color:var(--err);color:var(--err)}
+
+/* ─── STATS ROW ─── */
+.stats{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
+.sc{flex:1;min-width:75px;background:var(--card);border-radius:10px;padding:9px 12px;border:1px solid var(--bd)}
+.sc .sv{font-size:18px;font-weight:800;color:var(--acc);font-family:'Space Mono',monospace}
+.sc .sk{font-size:9px;color:var(--muted);margin-top:1px;text-transform:uppercase;letter-spacing:.06em}
+
+/* ─── BIOME BAR ─── */
+.biome-section{margin-bottom:10px}
+.biome-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;font-family:'Space Mono',monospace}
+.biome-row{display:flex;gap:6px;flex-wrap:wrap}
+.biome-btn{flex:1;min-width:100px;padding:10px 8px;border-radius:11px;border:1.5px solid transparent;
+  cursor:pointer;text-align:center;transition:.2s;position:relative;overflow:hidden;font-family:'Syne',sans-serif}
+.biome-btn:hover{transform:translateY(-2px)}
+.biome-btn.active{box-shadow:0 0 0 2px var(--acc),0 0 20px #00d4ff20}
+.biome-btn.locked{opacity:.55;cursor:pointer;filter:grayscale(.5)}
+.biome-btn .bn{font-size:12px;font-weight:700;margin-top:4px}
+.biome-btn .bico{font-size:22px}
+.biome-btn .bprice{font-size:10px;color:var(--gold);margin-top:2px;font-family:'Space Mono',monospace}
+.biome-btn .blocked-tag{font-size:9px;background:#ffffff22;border-radius:4px;padding:1px 5px;margin-top:2px;display:inline-block}
+
+/* ─── AREA ─── */
+.fish-area{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;margin-bottom:10px;position:relative;overflow:hidden}
+.biome-bg{position:absolute;inset:0;opacity:.07;background-size:cover;background-position:center;pointer-events:none;transition:opacity .5s}
+.fish-rod-row{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.rod-select-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:'Space Mono',monospace}
+.rod-pill{padding:6px 12px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);font-size:12px;font-weight:700;cursor:pointer;color:var(--text);transition:.15s;font-family:'Syne',sans-serif}
+.rod-pill:hover{border-color:var(--acc)}
+.rod-pill.active{background:var(--acc);color:#000;border-color:var(--acc)}
+.rod-pill.locked-rod{opacity:.45;cursor:pointer;filter:grayscale(.6)}
+
+.cast-area{text-align:center;padding:20px 0}
+.cast-btn{background:linear-gradient(135deg,#00d4ff,#0066aa);border:none;border-radius:14px;
+  padding:14px 40px;font-size:16px;font-weight:800;color:#000;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;font-family:'Syne',sans-serif;letter-spacing:.04em;
+  position:relative;overflow:hidden}
+.cast-btn:hover{transform:scale(1.04);box-shadow:0 0 30px #00d4ff44}
+.cast-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.cast-btn::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);
+  transform:translateX(-100%);animation:shimmer 2.5s infinite}
+@keyframes shimmer{0%{transform:translateX(-100%)}60%,100%{transform:translateX(200%)}}
+
+/* casting animation */
+.casting-animation{font-size:40px;animation:castbounce .5s ease-in-out infinite alternate;display:inline-block}
+@keyframes castbounce{from{transform:translateY(0) rotate(-5deg)}to{transform:translateY(-12px) rotate(5deg)}}
+.catch-display{min-height:90px;display:flex;align-items:center;justify-content:center}
+
+/* fish card */
+.fish-card{background:var(--bg2);border-radius:14px;padding:14px 18px;border:2px solid transparent;
+  display:flex;align-items:center;gap:14px;animation:fishpop .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes fishpop{from{opacity:0;transform:scale(.6) translateY(20px)}to{opacity:1;transform:none}}
+.fish-card .ficon{font-size:44px;flex-shrink:0}
+.fish-card .fname{font-size:16px;font-weight:800}
+.fish-card .frarity{font-size:11px;font-weight:600;margin-top:2px;font-family:'Space Mono',monospace}
+.fish-card .froll{font-size:10px;color:var(--muted);margin-top:3px;font-family:'Space Mono',monospace}
+.fish-card .fval{font-size:13px;color:var(--gold);font-weight:700;margin-top:4px}
+
+/* ─── LOG LINE ─── */
+.log{font-size:11px;color:var(--muted);min-height:14px;margin-bottom:9px;font-style:italic;font-family:'Space Mono',monospace}
+
+/* ─── TWO COLUMNS ─── */
+.tcol{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:580px){.tcol{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--bd);border-radius:13px;padding:13px}
+.ptitle{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;
+  margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;font-family:'Space Mono',monospace}
+.ptitle button{background:none;border:1px solid var(--bd);color:var(--muted);cursor:pointer;font-size:10px;
+  padding:3px 8px;border-radius:6px;transition:.15s;font-family:'Syne',sans-serif}
+.ptitle button:hover{border-color:var(--acc);color:var(--text)}
+
+/* best fish display */
+.bfish{display:flex;align-items:center;gap:12px;background:var(--bg2);border-radius:10px;
+  padding:10px 12px;border:1px solid var(--bd)}
+.bfish-icon{width:52px;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  font-size:28px;flex-shrink:0;border:2px solid var(--bd)}
+
+/* leaderboard */
+.lbrow{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;
+  margin-bottom:5px;background:var(--bg2);border:1px solid var(--bd)}
+.lbrank{font-size:14px;font-weight:700;width:22px;text-align:center;flex-shrink:0}
+.lbname{flex:1;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbfish{font-size:10px;padding:3px 7px;border-radius:5px;font-weight:600;flex-shrink:0;font-family:'Space Mono',monospace}
+.lbsc{font-size:10px;color:var(--muted);flex-shrink:0;font-family:'Space Mono',monospace}
+
+/* ─── ROD SHOP ─── */
+.shop-section{margin-bottom:10px}
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:7px}
+.rod-card{background:var(--card);border:1.5px solid var(--bd);border-radius:12px;padding:12px;text-align:center;transition:.2s;position:relative}
+.rod-card:hover{border-color:var(--acc);transform:translateY(-2px)}
+.rod-card.owned{border-color:var(--ok)}
+.rod-card .rico{font-size:28px;margin-bottom:5px}
+.rod-card .rname{font-size:12px;font-weight:700}
+.rod-card .rdesc{font-size:9px;color:var(--muted);margin:3px 0 6px;font-family:'Space Mono',monospace;line-height:1.4}
+.rod-card .rprice{font-size:11px;color:var(--gold);font-weight:700;font-family:'Space Mono',monospace}
+.rod-card .rbadge{position:absolute;top:6px;right:6px;font-size:8px;background:var(--ok);color:#000;
+  border-radius:4px;padding:1px 5px;font-weight:700;font-family:'Space Mono',monospace}
+.rod-card .rsecret-tag{font-size:8px;background:var(--rare);color:#fff;border-radius:4px;padding:1px 5px;font-weight:700;font-family:'Space Mono',monospace;display:inline-block;margin-top:3px}
+.buy-btn{width:100%;margin-top:6px;padding:7px;border-radius:8px;border:1px solid var(--bd);
+  background:var(--bg3);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;
+  transition:.15s;font-family:'Syne',sans-serif}
+.buy-btn:hover:not(:disabled){background:var(--acc);color:#000;border-color:var(--acc)}
+.buy-btn:disabled{opacity:.35;cursor:not-allowed}
+
+/* ─── RARITY COLORS ─── */
+.r-common{color:#8899aa}.r-uncommon{color:#4ade80}.r-rare{color:#60a5fa}.r-epic{color:#c084fc}
+.r-legendary{color:#fbbf24}.r-mythic{color:#fb7185}.r-divine{color:#f0abfc}
+.r-secret{color:#aa44ff}.r-insane{color:#ff6644}
+
+/* ─── SECRET FOUND BANNER ─── */
+#secretBanner{display:none;background:linear-gradient(135deg,#1a0030,#0a0020);
+  border:1.5px solid var(--rare);border-radius:12px;padding:12px 16px;margin-bottom:10px;
+  text-align:center;animation:glowpulse 2s infinite}
+@keyframes glowpulse{0%,100%{box-shadow:0 0 10px #aa44ff40}50%{box-shadow:0 0 30px #aa44ff88,0 0 60px #aa44ff22}}
+#secretBanner p{font-size:13px;color:var(--rare);font-weight:700}
+#secretBanner small{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace}
+
+/* ─── ANIMATIONS ─── */
+@keyframes drop{0%{opacity:0;transform:translateY(-20px) scale(.85)}65%{transform:translateY(3px) scale(1.04)}100%{opacity:1;transform:none}}
+
+/* ─── BIOME ACTIVE INDICATOR ─── */
+.current-biome-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg3);
+  border-radius:10px;border:1px solid var(--bd);margin-bottom:10px;font-size:12px;font-weight:700}
+.cbiome-dot{width:8px;height:8px;border-radius:50%;animation:dp 2s infinite}
+@keyframes dp{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+</head>
+<body>
+
+<!-- ═══ AUTH ═══ -->
+<div id="authPage">
+  <div class="abox">
+    <div class="alogo">🎣</div>
+    <div class="atitle">RNG FISHING</div>
+    <div class="asub">cast · catch · collect</div>
+    <div class="tabs">
+      <button class="tab on" id="tLogin" onclick="switchTab('login')">Login</button>
+      <button class="tab"    id="tReg"   onclick="switchTab('reg')">Register</button>
+    </div>
+    <div id="fLogin">
+      <div class="fg"><label>Username</label>
+        <input id="lU" type="text" placeholder="angler99" autocomplete="username"
+          onkeydown="if(event.key==='Enter')document.getElementById('lP').focus()"></div>
+      <div class="fg"><label>Password</label>
+        <input id="lP" type="password" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin()"></div>
+      <button class="abtn" id="btnL" onclick="doLogin()">🎣 Masuk</button>
+    </div>
+    <div id="fReg" style="display:none">
+      <div class="fg"><label>Username</label>
+        <input id="rU" type="text" placeholder="angler_baru" maxlength="20" autocomplete="off"
+          onkeydown="if(event.key==='Enter')document.getElementById('rP').focus()"></div>
+      <div class="fg"><label>Password (min 6)</label>
+        <input id="rP" type="password" placeholder="••••••••" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter')doRegister()"></div>
+      <button class="abtn" id="btnR" onclick="doRegister()">✦ Buat Akun</button>
+    </div>
+    <div class="amsg" id="amsg"></div>
+  </div>
+</div>
+
+<!-- ═══ GAME ═══ -->
+<div id="gamePage">
+
+  <!-- NAV -->
+  <div class="nav">
+    <div class="nlogo">🎣 RNG Fishing</div>
+    <div class="nright">
+      <div class="nuser">Pemancing: <b id="navU">—</b></div>
+      <div class="coin-badge">🪙 <span id="coinDisplay">0</span></div>
+      <button class="lgbtn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="sc"><div class="sv" id="sCast">0</div><div class="sk">🎣 Total Cast</div></div>
+    <div class="sc"><div class="sv" id="sCoin">0</div><div class="sk">🪙 Coin</div></div>
+    <div class="sc"><div class="sv" id="sRare">0</div><div class="sk">✨ Rare+</div></div>
+    <div class="sc"><div class="sv" id="sLuck">1.0×</div><div class="sk">🍀 Rod Luck</div></div>
+    <div class="sc"><div class="sv" id="sBiome">Starter</div><div class="sk">🌊 Biome</div></div>
+  </div>
+
+  <!-- CURRENT BIOME -->
+  <div class="current-biome-bar" id="currentBiomeBar">
+    <div class="cbiome-dot" id="biomeDot"></div>
+    <span id="currentBiomeName">🌊 Starter Waters</span>
+    <span style="color:var(--muted);font-size:10px;margin-left:auto;font-family:'Space Mono',monospace" id="biomeDesc">Perairan dangkal — ikan pemula</span>
+  </div>
+
+  <!-- SECRET BANNER -->
+  <div id="secretBanner">
+    <p>🟣 KAMU MENEMUKAN IKAN SECRET DI JUNGLE!</p>
+    <small>Rod Mythic sekarang bisa dibeli di toko!</small>
+  </div>
+
+  <!-- BIOME SELECTOR -->
+  <div class="biome-section">
+    <div class="biome-title">🗺️ Pilih Biome</div>
+    <div class="biome-row" id="biomeRow"></div>
+  </div>
+
+  <!-- FISHING AREA -->
+  <div class="fish-area" id="fishArea">
+    <div class="biome-bg" id="biomeBg"></div>
+
+    <!-- ROD SELECTOR -->
+    <div class="fish-rod-row">
+      <span class="rod-select-label">Rod:</span>
+      <div id="rodPills"></div>
+    </div>
+
+    <div class="log" id="logLine">Pilih biome, pilih rod, lalu cast!</div>
+
+    <div class="cast-area">
+      <div class="catch-display" id="catchDisplay">
+        <span style="font-size:50px;opacity:.3">🌊</span>
+      </div>
+      <button class="cast-btn" id="castBtn" onclick="doCast()">🎣 Cast!</button>
+    </div>
+  </div>
+
+  <!-- BEST FISH + LEADERBOARD -->
+  <div class="tcol">
+    <div class="panel">
+      <div class="ptitle">🏆 Ikan Terbaik Kamu</div>
+      <div class="bfish" id="bfishDisp">
+        <div class="bfish-icon" id="bfishIcon">🎣</div>
+        <div>
+          <div id="bfName" style="font-size:14px;font-weight:800;color:var(--muted)">Belum ada</div>
+          <div id="bfRar" style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">Cast dulu!</div>
+          <div id="bfRoll" style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace"></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">📊 Leaderboard Top 5
+        <button onclick="loadLB()">↻ Refresh</button>
+      </div>
+      <div id="lbCont"><div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- ROD SHOP -->
+  <div class="shop-section">
+    <div class="ptitle" style="margin-bottom:8px">🛒 Rod Shop</div>
+    <div class="shop-grid" id="rodShop"></div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════
+// SUPABASE
+// ═══════════════════════════════════
+const SUPA_URL = 'https://xkpaaqppvmpfzkpnlpmk.supabase.co';
+const SUPA_KEY = 'sb_publishable_YAb7XAfrTsrKfIM8GdVIgQ_r7bVFhXw';
+// const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// ═══════════════════════════════════
+// BIOMES
+// ═══════════════════════════════════
+const BIOMES = [
+  {
+    id:'starter', name:'Starter Waters', icon:'🌊', color:'#00aaff',
+    desc:'Starter -- for new player',
+    bg:'linear-gradient(135deg,#001a33,#003355)',
+    unlockCost:0, unlocked:true,
+  },
+  {
+    id:'jungle', name:'Jungle River', icon:'🌿', color:'#22cc44',
+    desc:'Jungle — Fish Rare for rod',
+    bg:'linear-gradient(135deg,#001a08,#003318)',
+    unlockCost:500,
+  },
+  {
+    id:'cave', name:'Dark Cave', icon:'🕳️', color:'#8844ff',
+    desc:'Dark cave — ???',
+    bg:'linear-gradient(135deg,#100020,#1a0035)',
+    unlockCost:1500,
+  },
+  {
+    id:'abyss', name:'Deep Abyss', icon:'🌑', color:'#0044aa',
+    desc:'Deep Abyss — ???',
+    bg:'linear-gradient(135deg,#000510,#000f25)',
+    unlockCost:5000,
+  },
+  {
+    id:'sky', name:'Sky Lagoon', icon:'☁️', color:'#ffaa00',
+    desc:'sky lagoon — ???',
+    bg:'linear-gradient(135deg,#1a1000,#2a1800)',
+    unlockCost:15000,
+  },
+];
+
+// ═══════════════════════════════════
+// RARITIES
+// ═══════════════════════════════════
+const RAR = [
+  {id:'common',    name:'Common',    score:1,     w:5000, coinMin:1,  coinMax:5,   color:'#8899aa'},
+  {id:'uncommon',  name:'Uncommon',  score:5,     w:2000, coinMin:5,  coinMax:15,  color:'#4ade80'},
+  {id:'rare',      name:'Rare',      score:20,    w:700,  coinMin:15, coinMax:40,  color:'#60a5fa'},
+  {id:'epic',      name:'Epic',      score:70,    w:200,  coinMin:40, coinMax:100, color:'#c084fc'},
+  {id:'legendary', name:'Legendary', score:250,   w:45,   coinMin:100,coinMax:300, color:'#fbbf24'},
+  {id:'mythic',    name:'Mythic',    score:800,   w:10,   coinMin:300,coinMax:800, color:'#fb7185'},
+  {id:'divine',    name:'Divine',    score:2500,  w:2,    coinMin:800,coinMax:2000,color:'#f0abfc'},
+  {id:'secret',    name:'SECRET',    score:10000, w:.3,   coinMin:2000,coinMax:5000,color:'#aa44ff'},
+  {id:'insane',    name:'INSANE',    score:50000, w:.05,  coinMin:5000,coinMax:10000,color:'#ff6644'},
+];
+
+// ═══════════════════════════════════
+// FISH per BIOME
+// ═══════════════════════════════════
+const FISH = {
+  starter: [
+    {n:'Ikan Mas',          i:'🐟', maxRoll:10},
+    {n:'Ikan Nila',         i:'🐠', maxRoll:10},
+    {n:'Mujair',            i:'🐡', maxRoll:10},
+    {n:'Ikan Lele',         i:'🦈', maxRoll:10},
+    {n:'Gurame',            i:'🐬', maxRoll:10},
+    {n:'Udang Sungai',      i:'🦐', maxRoll:10},
+    {n:'Sidat Kecil',       i:'🐍', maxRoll:10},
+    {n:'Belut Emas',        i:'✨', maxRoll:10},
+    {n:'Koi Pelangi',       i:'🌈', maxRoll:10},
+    {n:'Ikan Dewa',         i:'👑', maxRoll:10},
+  ],
+  jungle: [
+    {n:'Piranha',           i:'🦷', maxRoll:10},
+    {n:'Arapaima',          i:'🐊', maxRoll:10},
+    {n:'Ikan Tanduk',       i:'🦌', maxRoll:10},
+    {n:'Peacock Bass',      i:'🦚', maxRoll:10},
+    {n:'Electric Eel',      i:'⚡', maxRoll:10},
+    {n:'Ikan Kupu-Kupu',    i:'🦋', maxRoll:10},
+    {n:'Stingray Sungai',   i:'💫', maxRoll:10},
+    {n:'Anaconda Fish',     i:'🐍', maxRoll:10},
+    {n:'Jungle Ghost',      i:'👻', maxRoll:10},
+    {n:'SECRET: Roh Hutan', i:'🌿', maxRoll:10, isSecret:true},
+  ],
+  cave: [
+    {n:'Ikan Buta',         i:'🦇', maxRoll:10},
+    {n:'Cave Lurker',       i:'🕷️', maxRoll:10},
+    {n:'Crystal Carp',      i:'💎', maxRoll:10},
+    {n:'Shadow Eel',        i:'🌑', maxRoll:10},
+    {n:'Glowfish',          i:'💡', maxRoll:10},
+    {n:'Void Minnow',       i:'🕳️', maxRoll:10},
+    {n:'Stalactite Bass',   i:'🗻', maxRoll:10},
+    {n:'Echo Trout',        i:'🔮', maxRoll:10},
+    {n:'Cave Leviathan',    i:'🐲', maxRoll:10},
+    {n:'Primordial Crab',   i:'🦀', maxRoll:10},
+  ],
+  abyss: [
+    {n:'Angler Fish',       i:'😈', maxRoll:10},
+    {n:'Abyssal Shark',     i:'🦈', maxRoll:10},
+    {n:'Deep Squid',        i:'🦑', maxRoll:10},
+    {n:'Bone Eel',          i:'💀', maxRoll:10},
+    {n:'Void Whale',        i:'🐋', maxRoll:10},
+    {n:'Abyss Kraken',      i:'🐙', maxRoll:10},
+    {n:'Pressure Crab',     i:'🦀', maxRoll:10},
+    {n:'Rift Serpent',      i:'🐍', maxRoll:10},
+    {n:'Abyss Dragon',      i:'🐉', maxRoll:10},
+    {n:'Leviathan Prime',   i:'⚫', maxRoll:10},
+  ],
+  sky: [
+    {n:'Cloud Koi',         i:'☁️', maxRoll:10},
+    {n:'Sky Marlin',        i:'🌤️', maxRoll:10},
+    {n:'Thunder Tuna',      i:'⚡', maxRoll:10},
+    {n:'Rainbow Trout',     i:'🌈', maxRoll:10},
+    {n:'Aurora Salmon',     i:'🌌', maxRoll:10},
+    {n:'Celestial Bass',    i:'⭐', maxRoll:10},
+    {n:'Phoenix Eel',       i:'🔥', maxRoll:10},
+    {n:'Stardust Carp',     i:'✨', maxRoll:10},
+    {n:'Sky God Fish',      i:'🌟', maxRoll:10},
+    {n:'Divine Leviathan',  i:'👑', maxRoll:10},
+  ],
+};
+
+// ═══════════════════════════════════
+// RODS
+// ═══════════════════════════════════
+const RODS = [
+  {id:'basic',     name:'Basic Rod',    icon:'🪵', luckMult:1,   price:0,     desc:'Rod kayu standar. Gratis!',       startOwned:true},
+  {id:'iron',      name:'Iron Rod',     icon:'⚙️', luckMult:1.5, price:150,   desc:'Luck 1.5× — lebih sering rare'},
+  {id:'golden',    name:'Golden Rod',   icon:'🟡', luckMult:2.5, price:600,   desc:'Luck 2.5× — emas memanggil ikan langka'},
+  {id:'enchanted', name:'Enchanted Rod',icon:'🔮', luckMult:4,   price:2000,  desc:'Luck 4× — diperkuat sihir kuno'},
+  {id:'dragon',    name:'Dragon Rod',   icon:'🐉', luckMult:7,   price:8000,  desc:'Luck 7× — dari sisik naga'},
+  {id:'cosmic',    name:'Cosmic Rod',   icon:'🌌', luckMult:12,  price:25000, desc:'Luck 12× — dibuat dari bintang'},
+  {id:'mythic',    name:'Mythic Rod',   icon:'👑', luckMult:25,  price:75000, desc:'Luck 25× — hanya untuk yang menemukan Secret di Jungle!', needsSecret:true},
+];
+
+// ═══════════════════════════════════
+// STATE
+// ═══════════════════════════════════
+let G = {
+  coins: 0, casts: 0, rares: 0,
+  bestFish: null,
+  currentBiome: 'starter',
+  currentRod: 'basic',
+  unlockedBiomes: ['starter'],
+  ownedRods: ['basic'],
+  foundJungleSecret: false,
+  saveQ: null,
+};
+let CU = null;
+let casting = false;
+let lbTimerIv = null, lbSecs = 60;
+
+function fishScore(f){ return f.rarity.score * 100000 + f.roll; }
+function getRodLuck(){
+  const rod = RODS.find(r=>r.id===G.currentRod)||RODS[0];
+  return rod.luckMult;
+}
+
+// ═══════════════════════════════════
+// RNG
+// ═══════════════════════════════════
+function pickRarity(){
+  const lk = getRodLuck();
+  const pool = RAR.map((r,i)=>({r, w: i>=2 ? r.w*lk : Math.max(1, r.w/Math.pow(lk,.6))}));
+  let tot = pool.reduce((a,b)=>a+b.w, 0), rnd = Math.random()*tot;
+  for(const {r,w} of pool){ rnd -= w; if(rnd<=0) return r; }
+  return RAR[0];
+}
+
+function castFish(){
+  const biome = BIOMES.find(b=>b.id===G.currentBiome);
+  const pool = FISH[G.currentBiome] || FISH.starter;
+  const rarity = pickRarity();
+  // pick random fish from biome pool
+  const fish = pool[Math.floor(Math.random()*pool.length)];
+  const roll = Math.floor(Math.random()*9999)+1;
+  const coinEarned = Math.floor(Math.random()*(rarity.coinMax-rarity.coinMin+1))+rarity.coinMin;
+  return { fish, rarity, roll, coinEarned, biome: G.currentBiome };
+}
+
+// ═══════════════════════════════════
+// AUTH UI
+// ═══════════════════════════════════
+function switchTab(t){
+  document.getElementById('tLogin').classList.toggle('on',t==='login');
+  document.getElementById('tReg').classList.toggle('on',t==='reg');
+  document.getElementById('fLogin').style.display=t==='login'?'':'none';
+  document.getElementById('fReg').style.display=t==='reg'?'':'none';
+  authMsg('','');
+}
+function authMsg(m,c){const e=document.getElementById('amsg');e.textContent=m;e.className='amsg'+(c?' '+c:'');}
+function setBtn(id,t,d){const b=document.getElementById(id);b.textContent=t;b.disabled=d;}
+
+async function doLogin(){
+  const u=document.getElementById('lU').value.trim(), p=document.getElementById('lP').value;
+  if(!u||!p){authMsg('Isi username & password','err');return;}
+  setBtn('btnL','Masuk…',true);authMsg('','');
+  // Local storage auth simulation (no Supabase needed for demo)
+  const accounts = JSON.parse(localStorage.getItem('fishing_accounts')||'{}');
+  if(!accounts[u.toLowerCase()]){authMsg('Username tidak ditemukan','err');setBtn('btnL','🎣 Masuk',false);return;}
+  if(accounts[u.toLowerCase()].password !== p){authMsg('Password salah','err');setBtn('btnL','🎣 Masuk',false);return;}
+  localStorage.setItem('fishing_session', u.toLowerCase());
+  CU = { id: u.toLowerCase(), username: u };
+  loadAndEnterGame();
+  setBtn('btnL','🎣 Masuk',false);
+}
+
+async function doRegister(){
+  const u=document.getElementById('rU').value.trim(), p=document.getElementById('rP').value;
+  if(!u||!p){authMsg('Isi semua field','err');return;}
+  if(u.length<2){authMsg('Username min 2 karakter','err');return;}
+  if(p.length<6){authMsg('Password min 6 karakter','err');return;}
+  if(!/^[a-zA-Z0-9_.-]+$/.test(u)){authMsg('Hanya huruf, angka, _ . -','err');return;}
+  const accounts = JSON.parse(localStorage.getItem('fishing_accounts')||'{}');
+  if(accounts[u.toLowerCase()]){authMsg('Username sudah dipakai','err');return;}
+  accounts[u.toLowerCase()] = { username: u, password: p };
+  localStorage.setItem('fishing_accounts', JSON.stringify(accounts));
+  authMsg('✅ Akun berhasil! Silakan login.','ok');
+  switchTab('login');
+  document.getElementById('lU').value = u;
+  setBtn('btnR','✦ Buat Akun',false);
+}
+
+window.addEventListener('load',()=>{
+  const sess = localStorage.getItem('fishing_session');
+  if(!sess)return;
+  const accounts = JSON.parse(localStorage.getItem('fishing_accounts')||'{}');
+  if(!accounts[sess])return;
+  CU = { id: sess, username: accounts[sess].username };
+  loadAndEnterGame();
+});
+
+function loadAndEnterGame(){
+  const saved = JSON.parse(localStorage.getItem('fishing_save_'+CU.id)||'{}');
+  G.coins = saved.coins||0;
+  G.casts = saved.casts||0;
+  G.rares = saved.rares||0;
+  G.bestFish = saved.bestFish||null;
+  G.currentBiome = saved.currentBiome||'starter';
+  G.currentRod = saved.currentRod||'basic';
+  G.unlockedBiomes = saved.unlockedBiomes||['starter'];
+  G.ownedRods = saved.ownedRods||['basic'];
+  G.foundJungleSecret = saved.foundJungleSecret||false;
+  enterGame();
+}
+
+function enterGame(){
+  document.getElementById('navU').textContent = CU.username;
+  document.getElementById('authPage').style.display='none';
+  document.getElementById('gamePage').style.display='block';
+  renderBiomes();
+  renderRodPills();
+  renderRodShop();
+  renderBestFish();
+  updateStats();
+  setBiomeTheme();
+  loadLB();
+  startLBTimer();
+  if(G.foundJungleSecret) document.getElementById('secretBanner').style.display='block';
+}
+
+function doLogout(){
+  saveGame();
+  stopLBTimer();
+  CU = null;
+  localStorage.removeItem('fishing_session');
+  document.getElementById('gamePage').style.display='none';
+  document.getElementById('authPage').style.display='flex';
+  document.getElementById('catchDisplay').innerHTML='<span style="font-size:50px;opacity:.3">🌊</span>';
+  authMsg('','');
+}
+
+// ═══════════════════════════════════
+// SAVE
+// ═══════════════════════════════════
+function saveGame(){
+  if(!CU)return;
+  localStorage.setItem('fishing_save_'+CU.id, JSON.stringify({
+    coins:G.coins, casts:G.casts, rares:G.rares,
+    bestFish:G.bestFish, currentBiome:G.currentBiome,
+    currentRod:G.currentRod, unlockedBiomes:G.unlockedBiomes,
+    ownedRods:G.ownedRods, foundJungleSecret:G.foundJungleSecret,
+    bestScore:G.bestFish?fishScore(G.bestFish):0,
+    username:CU.username,
+  }));
+  // Update global leaderboard data
+  const lb = JSON.parse(localStorage.getItem('fishing_lb')||'{}');
+  lb[CU.id] = {
+    username: CU.username,
+    bestFish: G.bestFish,
+    bestScore: G.bestFish?fishScore(G.bestFish):0,
+    casts: G.casts,
+  };
+  localStorage.setItem('fishing_lb', JSON.stringify(lb));
+}
+function scheduleSave(){ clearTimeout(G.saveQ); G.saveQ=setTimeout(saveGame,2000); }
+
+// ═══════════════════════════════════
+// CAST
+// ═══════════════════════════════════
+const CAST_MSGS = {
+  common:'Dapat ikan biasa... cast lagi!', uncommon:'Lumayan! Uncommon.',
+  rare:'✨ Rare! Bagus!', epic:'🔥 Epic!! Keren!',
+  legendary:'⭐ LEGENDARY!!!', mythic:'💫 MYTHIC!!!!',
+  divine:'💎 DIVINE!!!!!', secret:'🟣 SECRET!!! LUAR BIASA!!!',
+  insane:'🔴 INSANE!!!! TIDAK MUNGKIN!!!!',
+};
+
+async function doCast(){
+  if(casting)return;
+  casting=true;
+  const btn=document.getElementById('castBtn');
+  btn.disabled=true;btn.textContent='Melempar...';
+
+  // Show casting animation
+  document.getElementById('catchDisplay').innerHTML=
+    '<div class="casting-animation">🎣</div>';
+  document.getElementById('logLine').textContent='Menunggu ikan...';
+
+  await sleep(900 + Math.random()*600);
+
+  const result = castFish();
+  G.casts++;
+  G.coins += result.coinEarned;
+  if(result.rarity.score >= 20) G.rares++;
+
+  // Check secret fish in jungle
+  if(result.fish.isSecret && G.currentBiome==='jungle' && !G.foundJungleSecret){
+    G.foundJungleSecret = true;
+    document.getElementById('secretBanner').style.display='block';
+    renderRodShop();
+  }
+
+  // Update best fish
+  const score = fishScore(result);
+  if(!G.bestFish || score > fishScore(G.bestFish)){
+    G.bestFish = result;
+    renderBestFish();
+  }
+
+  // Display fish card
+  displayFishCard(result);
+  document.getElementById('logLine').textContent =
+    (CAST_MSGS[result.rarity.id]||'Ikan ditemukan!')
+    + ` +${result.coinEarned}🪙`;
+
+  updateStats();renderRodShop();scheduleSave();
+
+  await sleep(300);
+  casting=false;
+  btn.disabled=false;btn.textContent='🎣 Cast!';
+}
+
+function displayFishCard(result){
+  const r = result.rarity;
+  const f = result.fish;
+  const display = document.getElementById('catchDisplay');
+  display.innerHTML='';
+  const card = document.createElement('div');
+  card.className='fish-card';
+  card.style.borderColor=r.color;
+  card.style.boxShadow=`0 0 20px ${r.color}44`;
+  card.innerHTML=`
+    <div class="ficon">${f.i}</div>
+    <div>
+      <div class="fname" style="color:${r.color}">${f.n}</div>
+      <div class="frarity r-${r.id}">${r.name}</div>
+      <div class="froll">Roll: 1:${result.roll} · Biome: ${BIOMES.find(b=>b.id===result.biome)?.name}</div>
+      <div class="fval">+${result.coinEarned} 🪙</div>
+    </div>`;
+  display.appendChild(card);
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ═══════════════════════════════════
+// BIOMES
+// ═══════════════════════════════════
+function renderBiomes(){
+  const row=document.getElementById('biomeRow');row.innerHTML='';
+  BIOMES.forEach(b=>{
+    const unlocked=G.unlockedBiomes.includes(b.id);
+    const active=G.currentBiome===b.id;
+    const btn=document.createElement('button');
+    btn.className='biome-btn'+(active?' active':'')+(unlocked?'':' locked');
+    btn.style.background=unlocked?b.bg:'var(--bg3)';
+    btn.style.borderColor=active?'var(--acc)':(unlocked?b.color:b.color+'44');
+    btn.innerHTML=`
+      <div class="bico">${b.icon}</div>
+      <div class="bn" style="color:${unlocked?b.color:'var(--muted)'}">${b.name}</div>
+      ${unlocked?'':`<div class="bprice">🪙 ${b.unlockCost.toLocaleString()}</div>`}
+      ${active?'<div class="blocked-tag" style="background:var(--acc)22;color:var(--acc)">AKTIF</div>':''}
+    `;
+    btn.onclick=()=>selectOrUnlockBiome(b);
+    row.appendChild(btn);
+  });
+}
+
+function selectOrUnlockBiome(b){
+  if(G.unlockedBiomes.includes(b.id)){
+    G.currentBiome=b.id;
+    renderBiomes();renderRodPills();setBiomeTheme();updateStats();scheduleSave();
+    document.getElementById('logLine').textContent=`Berpindah ke ${b.name}!`;
+  } else {
+    if(G.coins<b.unlockCost){
+      document.getElementById('logLine').textContent=`❌ Coin tidak cukup! Butuh 🪙${b.unlockCost.toLocaleString()}`;
+      return;
+    }
+    G.coins-=b.unlockCost;
+    G.unlockedBiomes.push(b.id);
+    G.currentBiome=b.id;
+    renderBiomes();renderRodPills();setBiomeTheme();updateStats();scheduleSave();
+    document.getElementById('logLine').textContent=`🎉 ${b.name} terbuka! Selamat mancing!`;
+  }
+}
+
+function setBiomeTheme(){
+  const b=BIOMES.find(x=>x.id===G.currentBiome)||BIOMES[0];
+  document.getElementById('biomeBg').style.background=b.bg;
+  document.getElementById('biomeBg').style.opacity='.12';
+  document.getElementById('biomeDot').style.background=b.color;
+  document.getElementById('biomeDot').style.boxShadow=`0 0 8px ${b.color}`;
+  document.getElementById('currentBiomeName').textContent=`${b.icon} ${b.name}`;
+  document.getElementById('biomeDesc').textContent=b.desc;
+  document.getElementById('sBiome').textContent=b.name.split(' ')[0];
+}
+
+// ═══════════════════════════════════
+// RODS
+// ═══════════════════════════════════
+function renderRodPills(){
+  const wrap=document.getElementById('rodPills');wrap.innerHTML='';
+  RODS.filter(r=>G.ownedRods.includes(r.id)).forEach(r=>{
+    const btn=document.createElement('button');
+    btn.className='rod-pill'+(G.currentRod===r.id?' active':'');
+    btn.textContent=r.icon+' '+r.name;
+    btn.onclick=()=>{G.currentRod=r.id;renderRodPills();updateStats();scheduleSave();
+      document.getElementById('logLine').textContent=`Rod ${r.name} dipilih! Luck ${r.luckMult}×`;};
+    wrap.appendChild(btn);
+  });
+}
+
+function renderRodShop(){
+  const shop=document.getElementById('rodShop');shop.innerHTML='';
+  RODS.forEach(r=>{
+    const owned=G.ownedRods.includes(r.id);
+    const canAfford=G.coins>=r.price;
+    const needsSecret=r.needsSecret&&!G.foundJungleSecret;
+    const card=document.createElement('div');
+    card.className='rod-card'+(owned?' owned':'');
+    let reqTag='';
+    if(r.needsSecret) reqTag=`<div class="rsecret-tag">${G.foundJungleSecret?'✅ Syarat terpenuhi':'🟣 Butuh Secret di Jungle'}</div>`;
+    card.innerHTML=`
+      ${owned?'<div class="rbadge">OWNED</div>':''}
+      <div class="rico">${r.icon}</div>
+      <div class="rname">${r.name}</div>
+      <div class="rdesc">${r.desc}<br>Luck: <b style="color:var(--gold)">${r.luckMult}×</b></div>
+      ${reqTag}
+      ${r.price>0?`<div class="rprice">🪙 ${r.price.toLocaleString()}</div>`:'<div class="rprice" style="color:var(--ok)">GRATIS</div>'}
+      <button class="buy-btn" ${owned||!canAfford||needsSecret?'disabled':''}
+        onclick="buyRod('${r.id}')">
+        ${owned?'Sudah dimiliki':needsSecret?'🔒 Locked':canAfford?`Beli (🪙${r.price.toLocaleString()})`:`Butuh 🪙${r.price.toLocaleString()}`}
+      </button>`;
+    shop.appendChild(card);
+  });
+}
+
+function buyRod(id){
+  const rod=RODS.find(r=>r.id===id);
+  if(!rod||G.ownedRods.includes(id))return;
+  if(rod.needsSecret&&!G.foundJungleSecret){
+    document.getElementById('logLine').textContent='❌ Temukan Secret Fish di Jungle dulu!';return;
+  }
+  if(G.coins<rod.price){
+    document.getElementById('logLine').textContent=`❌ Coin tidak cukup! Butuh 🪙${rod.price.toLocaleString()}`;return;
+  }
+  G.coins-=rod.price;
+  G.ownedRods.push(id);
+  G.currentRod=id;
+  renderRodPills();renderRodShop();updateStats();scheduleSave();
+  document.getElementById('logLine').textContent=`🎉 ${rod.icon} ${rod.name} dibeli! Luck ${rod.luckMult}× aktif!`;
+}
+
+// ═══════════════════════════════════
+// BEST FISH & STATS
+// ═══════════════════════════════════
+function renderBestFish(){
+  const bf=G.bestFish;
+  if(!bf){return;}
+  const r=bf.rarity,f=bf.fish;
+  document.getElementById('bfishIcon').textContent=f.i;
+  document.getElementById('bfishIcon').style.background=r.color+'22';
+  document.getElementById('bfishIcon').style.borderColor=r.color;
+  document.getElementById('bfName').textContent=f.n;
+  document.getElementById('bfName').style.color=r.color;
+  document.getElementById('bfRar').textContent=r.name+' · '+BIOMES.find(b=>b.id===bf.biome)?.name;
+  document.getElementById('bfRar').style.color=r.color;
+  document.getElementById('bfRoll').textContent='Roll: 1:'+bf.roll+' · Score: '+fishScore(bf).toLocaleString();
+}
+
+function updateStats(){
+  document.getElementById('sCast').textContent=G.casts;
+  document.getElementById('sCoin').textContent=G.coins.toLocaleString();
+  document.getElementById('coinDisplay').textContent=G.coins.toLocaleString();
+  document.getElementById('sRare').textContent=G.rares;
+  document.getElementById('sLuck').textContent=getRodLuck()+'×';
+}
+
+// ═══════════════════════════════════
+// LEADERBOARD — localStorage
+// ═══════════════════════════════════
+const MEDALS=['🥇','🥈','🥉','4️⃣','5️⃣'];
+function loadLB(){
+  const c=document.getElementById('lbCont');
+  c.innerHTML='';
+  const lb=JSON.parse(localStorage.getItem('fishing_lb')||'{}');
+  const entries=Object.values(lb).sort((a,b)=>b.bestScore-a.bestScore).slice(0,5);
+  if(!entries.length){c.innerHTML='<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px">Belum ada data</div>';return;}
+  entries.forEach((row,i)=>{
+    const bf=row.bestFish;
+    const r=bf?.rarity,f=bf?.fish;
+    const col=r?r.color:'#8899aa';
+    const d=document.createElement('div');d.className='lbrow';
+    d.innerHTML=`<div class="lbrank">${MEDALS[i]||i+1}</div>
+      <div class="lbname">${esc(row.username||'?')}</div>
+      <div class="lbfish" style="background:${col}18;color:${col};border:1px solid ${col}28">
+        ${f?.i||'🎣'} ${esc(f?.n||'—')} · ${esc(r?.name||'—')}
+      </div>
+      <div class="lbsc">${(row.bestScore||0).toLocaleString()}</div>`;
+    c.appendChild(d);
+  });
+}
+
+function startLBTimer(){
+  stopLBTimer();
+  lbSecs=60;
+  lbTimerIv=setInterval(()=>{
+    lbSecs--;
+    if(lbSecs<=0){lbSecs=60;loadLB();}
+  },1000);
+}
+function stopLBTimer(){clearInterval(lbTimerIv);lbTimerIv=null;}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
