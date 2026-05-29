@@ -152,6 +152,22 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .bfish-icon{width:52px;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center;
   font-size:28px;flex-shrink:0;border:2px solid var(--bd)}
 
+/* ─── PROFILE PANEL ─── */
+.profile-section-label{font-size:9px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;
+  font-family:'Space Mono',monospace}
+.profile-stat-row{display:flex;align-items:center;gap:10px;
+  background:var(--bg2);border-radius:9px;padding:9px 11px;border:1px solid var(--bd)}
+.profile-stat-icon{font-size:22px;flex-shrink:0}
+.profile-stat-name{font-size:13px;font-weight:700}
+.profile-stat-sub{font-size:10px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:2px}
+.profile-stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.psg-cell{background:var(--bg2);border:1px solid var(--bd);border-radius:8px;
+  padding:8px 6px;text-align:center}
+.psg-val{font-size:14px;font-weight:800;color:var(--acc);font-family:'Space Mono',monospace}
+.psg-key{font-size:8px;color:var(--muted);margin-top:2px;text-transform:uppercase;
+  letter-spacing:.06em}
+
 /* leaderboard */
 .lbrow{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;
   margin-bottom:5px;background:var(--bg2);border:1px solid var(--bd)}
@@ -531,16 +547,68 @@ animation:eventPulse 1.5s infinite;
   </div>
 </div>
 
-  <!-- BEST FISH + LEADERBOARD -->
+  <!-- PROFILE + LEADERBOARD -->
   <div class="tcol">
-    <div class="panel">
-      <div class="ptitle">🏆 Ikan Terbaik Kamu</div>
+    <div class="panel" style="min-width:0">
+      <div class="ptitle">👤 Profil Pemancing</div>
+
+      <!-- Best Fish -->
+      <div class="profile-section-label">🐟 Ikan Terbaik</div>
       <div class="bfish" id="bfishDisp">
         <div class="bfish-icon" id="bfishIcon">🎣</div>
-        <div>
+        <div style="min-width:0">
           <div id="bfName" style="font-size:14px;font-weight:800;color:var(--muted)">Belum ada</div>
           <div id="bfRar" style="font-size:10px;color:var(--muted);font-family:'Space Mono',monospace">Cast dulu!</div>
           <div id="bfRoll" style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace"></div>
+        </div>
+      </div>
+
+      <!-- Best Rod -->
+      <div class="profile-section-label" style="margin-top:10px">🎣 Rod Terbaik</div>
+      <div class="profile-stat-row" id="profRodRow">
+        <span class="profile-stat-icon" id="profRodIcon">🪵</span>
+        <div>
+          <div class="profile-stat-name" id="profRodName">Basic Rod</div>
+          <div class="profile-stat-sub" id="profRodLuck">Luck 1×</div>
+        </div>
+      </div>
+
+      <!-- Best Biome -->
+      <div class="profile-section-label" style="margin-top:10px">🗺️ Biome Terbuka</div>
+      <div class="profile-stat-row" id="profBiomeRow">
+        <span class="profile-stat-icon" id="profBiomeIcon">🌊</span>
+        <div>
+          <div class="profile-stat-name" id="profBiomeName">Starter Waters</div>
+          <div class="profile-stat-sub" id="profBiomeCount">1 / 5 biome</div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="profile-section-label" style="margin-top:10px">📊 Statistik</div>
+      <div class="profile-stats-grid">
+        <div class="psg-cell">
+          <div class="psg-val" id="profCasts">0</div>
+          <div class="psg-key">Total Cast</div>
+        </div>
+        <div class="psg-cell">
+          <div class="psg-val" id="profCoins">0</div>
+          <div class="psg-key">Coin Dimiliki</div>
+        </div>
+        <div class="psg-cell">
+          <div class="psg-val" id="profRares">0</div>
+          <div class="psg-key">Rare+ Dapat</div>
+        </div>
+        <div class="psg-cell">
+          <div class="psg-val" id="profRods">1</div>
+          <div class="psg-key">Rod Dimiliki</div>
+        </div>
+        <div class="psg-cell">
+          <div class="psg-val" id="profSecret">❌</div>
+          <div class="psg-key">Secret Found</div>
+        </div>
+        <div class="psg-cell">
+          <div class="psg-val" id="profScore">0</div>
+          <div class="psg-key">Best Score</div>
         </div>
       </div>
     </div>
@@ -923,34 +991,34 @@ window.addEventListener('load',()=>{
   loadAndEnterGame();
 });
 
-function loadAndEnterGame(){
-  const saved = JSON.parse(localStorage.getItem('fishing_save_'+CU.id)||'{}');
-  G.coins = saved.coins||0;
-  G.casts = saved.casts||0;
-  G.rares = saved.rares||0;
-  G.bestFish = saved.bestFish||null;
-  G.currentBiome = saved.currentBiome||'starter';
-  G.currentRod = saved.currentRod||'basic';
-  G.unlockedBiomes = saved.unlockedBiomes||['starter'];
-  G.ownedRods = saved.ownedRods||['basic'];
+async function loadAndEnterGame(){
+  // Load progress dari Supabase game_saves
+  const { data: saveRow } = await sb
+    .from('game_saves')
+    .select('data')
+    .eq('user_id', CU.id)
+    .maybeSingle();
+
+  const saved = saveRow?.data || {};
+  G.coins   = saved.coins||0;
+  G.casts   = saved.casts||0;
+  G.rares   = saved.rares||0;
+  G.bestFish          = saved.bestFish||null;
+  G.currentBiome      = saved.currentBiome||'starter';
+  G.currentRod        = saved.currentRod||'basic';
+  G.unlockedBiomes    = saved.unlockedBiomes||['starter'];
+  G.ownedRods         = saved.ownedRods||['basic'];
   G.foundJungleSecret = saved.foundJungleSecret||false;
-  G.offlineGuaranteedInsane =
-  saved.offlineGuaranteedInsane || false;
-
-G.usedOfflineCode =
-  saved.usedOfflineCode || false;
-  G.guaranteedInsane = saved.guaranteedInsane||false;
-  autoCast = saved.autoCast || false;
-autoCastStartedAt = saved.autoCastStartedAt || null;
+  G.offlineGuaranteedInsane = saved.offlineGuaranteedInsane||false;
+  G.usedOfflineCode   = saved.usedOfflineCode||false;
+  G.guaranteedInsane  = saved.guaranteedInsane||false;
+  autoCast            = saved.autoCast||false;
+  autoCastStartedAt   = saved.autoCastStartedAt||null;
   processOfflineAutoCast(saved);
-enterGame();
-
-if(autoCast){
-  setTimeout(()=>{
-    toggleAutoCast();
-    toggleAutoCast();
-  },200);
-}
+  enterGame();
+  if(autoCast){
+    setTimeout(()=>{ toggleAutoCast(); toggleAutoCast(); }, 200);
+  }
 }
 
 function enterGame(){
@@ -982,32 +1050,85 @@ function doLogout(){
 // ═══════════════════════════════════
 // SAVE
 // ═══════════════════════════════════
-function saveGame(){
-  if(!CU)return;
-  localStorage.setItem('fishing_save_'+CU.id, JSON.stringify({
+async function saveGame(){
+  if(!CU) return;
+
+  const bf       = G.bestFish;
+  const bestRod  = RODS.filter(r=>G.ownedRods.includes(r.id))
+                       .sort((a,b)=>b.luckMult-a.luckMult)[0] || RODS[0];
+  const bestBiome= BIOMES.filter(b=>G.unlockedBiomes.includes(b.id))
+                         .slice(-1)[0] || BIOMES[0];
+
+  const saveData = {
     coins:G.coins, casts:G.casts, rares:G.rares,
     bestFish:G.bestFish, currentBiome:G.currentBiome,
     currentRod:G.currentRod, unlockedBiomes:G.unlockedBiomes,
     ownedRods:G.ownedRods, foundJungleSecret:G.foundJungleSecret,
     offlineGuaranteedInsane:G.offlineGuaranteedInsane,
-usedOfflineCode:G.usedOfflineCode,
+    usedOfflineCode:G.usedOfflineCode,
     guaranteedInsane:G.guaranteedInsane,
-    bestScore:G.bestFish?fishScore(G.bestFish):0,
+    bestScore:bf ? fishScore(bf) : 0,
     username:CU.username,
-
-autoCast:autoCast,
-autoCastStartedAt:autoCastStartedAt,
-lastOnline:Date.now(),
-  }));
-  // Update global leaderboard data
-  const lb = JSON.parse(localStorage.getItem('fishing_lb')||'{}');
-  lb[CU.id] = {
-    username: CU.username,
-    bestFish: G.bestFish,
-    bestScore: G.bestFish?fishScore(G.bestFish):0,
-    casts: G.casts,
+    autoCast, autoCastStartedAt,
+    lastOnline:Date.now(),
   };
-  localStorage.setItem('fishing_lb', JSON.stringify(lb));
+
+  // 1. Simpan progress lengkap di game_saves
+  await sb.from('game_saves').upsert(
+    { user_id:CU.id, data:saveData, updated_at:new Date().toISOString() },
+    { onConflict:'user_id' }
+  );
+
+  // 2. Update profil pemancing (tampil di tabel users)
+  await sb.from('profiles').upsert(
+    {
+      id:               CU.id,
+      username:         CU.username,
+      // Best fish
+      best_fish_name:   bf?.fish?.n    || null,
+      best_fish_icon:   bf?.fish?.i    || null,
+      best_fish_rarity: bf?.rarity?.name  || null,
+      best_fish_color:  bf?.rarity?.color || null,
+      best_fish_biome:  bf?.biome      || null,
+      best_fish_roll:   bf?.roll       || null,
+      best_score:       bf ? fishScore(bf) : 0,
+      // Best rod
+      best_rod_id:      bestRod.id,
+      best_rod_name:    bestRod.name,
+      best_rod_icon:    bestRod.icon,
+      best_rod_luck:    bestRod.luckMult,
+      // Best / furthest biome
+      best_biome_id:    bestBiome.id,
+      best_biome_name:  bestBiome.name,
+      best_biome_icon:  bestBiome.icon,
+      // Stats
+      total_casts:      G.casts,
+      total_coins:      G.coins,
+      total_rares:      G.rares,
+      rods_owned:       G.ownedRods.length,
+      biomes_unlocked:  G.unlockedBiomes.length,
+      found_secret:     G.foundJungleSecret,
+      updated_at:       new Date().toISOString(),
+    },
+    { onConflict:'id' }
+  );
+
+  // 3. Update leaderboard
+  await sb.from('leaderboard').upsert(
+    {
+      user_id:      CU.id,
+      username:     CU.username,
+      best_score:   bf ? fishScore(bf) : 0,
+      fish_name:    bf?.fish?.n    || null,
+      fish_icon:    bf?.fish?.i    || null,
+      rarity:       bf?.rarity?.name  || null,
+      rarity_color: bf?.rarity?.color || null,
+      casts:        G.casts,
+      coins:        G.coins,
+      updated_at:   new Date().toISOString(),
+    },
+    { onConflict:'user_id' }
+  );
 }
 function scheduleSave(){ clearTimeout(G.saveQ); G.saveQ=setTimeout(saveGame,2000); }
 
@@ -1765,18 +1886,60 @@ function buyRod(id){
 // ═══════════════════════════════════
 // BEST FISH & STATS
 // ═══════════════════════════════════
-function renderBestFish(){
-  const bf=G.bestFish;
-  if(!bf){return;}
-  const r=bf.rarity,f=bf.fish;
-  document.getElementById('bfishIcon').textContent=f.i;
-  document.getElementById('bfishIcon').style.background=r.color+'22';
-  document.getElementById('bfishIcon').style.borderColor=r.color;
-  document.getElementById('bfName').textContent=f.n;
-  document.getElementById('bfName').style.color=r.color;
-  document.getElementById('bfRar').textContent=r.name+' · '+BIOMES.find(b=>b.id===bf.biome)?.name;
-  document.getElementById('bfRar').style.color=r.color;
-  document.getElementById('bfRoll').textContent='Roll: 1:'+bf.roll+' · Score: '+fishScore(bf).toLocaleString();
+function renderBestFish(){ renderProfile(); } // alias agar kode lain tetap jalan
+
+function renderProfile(){
+  // ── Best Fish ──
+  const bf = G.bestFish;
+  if(bf && bf.rarity && bf.fish){
+    const r = bf.rarity, f = bf.fish;
+    document.getElementById('bfishIcon').textContent = f.i;
+    document.getElementById('bfishIcon').style.background = r.color+'22';
+    document.getElementById('bfishIcon').style.borderColor = r.color;
+    document.getElementById('bfName').textContent = f.n;
+    document.getElementById('bfName').style.color = r.color;
+    document.getElementById('bfRar').textContent = r.name + ' · ' + (BIOMES.find(b=>b.id===bf.biome)?.name||'');
+    document.getElementById('bfRar').style.color = r.color;
+    document.getElementById('bfRoll').textContent = 'Roll: 1:' + bf.roll + ' · Score: ' + fishScore(bf).toLocaleString();
+    document.getElementById('profScore').textContent = abbreviate(fishScore(bf));
+    document.getElementById('profScore').style.color = r.color;
+  }
+
+  // ── Best Rod (rod terbaik yang dimiliki berdasarkan luckMult) ──
+  const ownedRodObjs = RODS.filter(r => G.ownedRods.includes(r.id))
+    .sort((a,b) => b.luckMult - a.luckMult);
+  const bestRod = ownedRodObjs[0] || RODS[0];
+  document.getElementById('profRodIcon').textContent = bestRod.icon;
+  document.getElementById('profRodName').textContent = bestRod.name;
+  document.getElementById('profRodLuck').textContent = 'Luck ' + bestRod.luckMult + '×';
+  // warnai berdasarkan tier rod
+  const rodColors = { basic:'#8899aa', iron:'#aabbcc', golden:'#ffd700',
+    enchanted:'#c084fc', dragon:'#fb7185', cosmic:'#60a5fa', mythic:'#fbbf24' };
+  document.getElementById('profRodName').style.color = rodColors[bestRod.id] || 'var(--acc)';
+
+  // ── Best / Current Biome ──
+  const unlockedBiomeObjs = BIOMES.filter(b => G.unlockedBiomes.includes(b.id));
+  // biome "terbaik" = yang paling mahal/terakhir di list
+  const bestBiome = unlockedBiomeObjs[unlockedBiomeObjs.length-1] || BIOMES[0];
+  document.getElementById('profBiomeIcon').textContent = bestBiome.icon;
+  document.getElementById('profBiomeName').textContent = bestBiome.name;
+  document.getElementById('profBiomeName').style.color = bestBiome.color;
+  document.getElementById('profBiomeCount').textContent =
+    G.unlockedBiomes.length + ' / ' + BIOMES.length + ' biome terbuka';
+
+  // ── Stats grid ──
+  document.getElementById('profCasts').textContent = abbreviate(G.casts);
+  document.getElementById('profCoins').textContent = abbreviate(G.coins);
+  document.getElementById('profRares').textContent = abbreviate(G.rares);
+  document.getElementById('profRods').textContent  = G.ownedRods.length + ' / ' + RODS.length;
+  document.getElementById('profSecret').textContent = G.foundJungleSecret ? '✅' : '❌';
+}
+
+function abbreviate(n){
+  if(n >= 1e9) return (n/1e9).toFixed(1)+'B';
+  if(n >= 1e6) return (n/1e6).toFixed(1)+'M';
+  if(n >= 1e3) return (n/1e3).toFixed(1)+'K';
+  return String(n);
 }
 
 function updateStats(){
@@ -1784,11 +1947,8 @@ function updateStats(){
   document.getElementById('sCoin').textContent=G.coins.toLocaleString();
   document.getElementById('coinDisplay').textContent=G.coins.toLocaleString();
   document.getElementById('sRare').textContent=G.rares;
-  document.getElementById(
-  'sLuck'
-).textContent =
-  getRodLuck().toFixed(1)
-  + '×';
+  document.getElementById('sLuck').textContent=getRodLuck().toFixed(1)+'×';
+  renderProfile();
 }
 
 // ═══════════════════════════════════
