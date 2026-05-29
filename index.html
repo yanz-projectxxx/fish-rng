@@ -62,6 +62,21 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
 .lgbtn{padding:5px 12px;border-radius:7px;border:1px solid var(--bd);background:none;color:var(--muted);font-size:11px;cursor:pointer;transition:.2s;font-family:'Syne',sans-serif}
 .lgbtn:hover{border-color:var(--err);color:var(--err)}
 
+@keyframes eventPulse{
+
+  0%,100%{
+    transform:scale(1);
+    box-shadow:0 0 25px #ffd70088;
+  }
+
+  50%{
+    transform:scale(1.01);
+    box-shadow:
+      0 0 40px #ffd700,
+      0 0 80px #ffd70066;
+  }
+
+}
 /* ─── STATS ROW ─── */
 .stats{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}
 .sc{flex:1;min-width:75px;background:var(--card);border-radius:10px;padding:9px 12px;border:1px solid var(--bd)}
@@ -422,7 +437,37 @@ body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-he
       <button class="lgbtn" onclick="doLogout()">Logout</button>
     </div>
   </div>
+<div id="globalEventBar" style="
+display:none;
+margin-bottom:10px;
+padding:12px;
+border-radius:14px;
+background:linear-gradient(135deg,#ffd700,#ffae00);
+color:#000;
+font-weight:800;
+text-align:center;
+border:2px solid #fff4a3;
+box-shadow:0 0 25px #ffd70088;
+animation:eventPulse 1.5s infinite;
+">
 
+  🌟 GLOBAL LUCK EVENT ACTIVE
+
+  <div style="
+  margin-top:4px;
+  font-size:20px;
+  ">
+    🍀 x50 LUCK
+  </div>
+
+  <div id="eventCountdown" style="
+  font-size:12px;
+  margin-top:4px;
+  ">
+    05:00
+  </div>
+
+</div>
   <!-- STATS -->
   <div class="stats">
     <div class="sc"><div class="sv" id="sCast">0</div><div class="sk">🎣 Total Cast</div></div>
@@ -740,8 +785,16 @@ let lbTimerIv = null, lbSecs = 60;
 
 function fishScore(f){ return f.rarity.score * 100000 + f.roll; }
 function getRodLuck(){
-  const rod = RODS.find(r=>r.id===G.currentRod)||RODS[0];
-  return rod.luckMult;
+
+  const rod =
+    RODS.find(
+      r=>r.id===G.currentRod
+    ) || RODS[0];
+
+  return (
+    rod.luckMult *
+    GLOBAL_LUCK
+  );
 }
 
 // ═══════════════════════════════════
@@ -1319,7 +1372,60 @@ function displayFishCard(result){
 }
 
 function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+let GLOBAL_LUCK = 1;
+let GLOBAL_EVENT_END = 0;
+async function refreshGlobalLuck(){
 
+  const { data } = await sb
+    .from('global_events')
+    .select('*')
+    .eq('id',1)
+    .single();
+
+  if(!data){
+
+    GLOBAL_LUCK = 1;
+
+    document.getElementById(
+      'globalEventBar'
+    ).style.display = 'none';
+
+    return;
+  }
+
+  const endTime =
+    new Date(
+      data.active_until
+    ).getTime();
+
+  const active =
+    endTime > Date.now();
+
+  if(active){
+
+    GLOBAL_LUCK =
+      Number(
+        data.luck_multiplier
+      );
+
+    GLOBAL_EVENT_END =
+      endTime;
+
+    document.getElementById(
+      'globalEventBar'
+    ).style.display = 'block';
+
+  }else{
+
+    GLOBAL_LUCK = 1;
+
+    document.getElementById(
+      'globalEventBar'
+    ).style.display = 'none';
+  }
+
+  updateStats();
+}
 function playUltraCutscene(result){
 
   const old =
@@ -1679,7 +1785,11 @@ function updateStats(){
   document.getElementById('sCoin').textContent=G.coins.toLocaleString();
   document.getElementById('coinDisplay').textContent=G.coins.toLocaleString();
   document.getElementById('sRare').textContent=G.rares;
-  document.getElementById('sLuck').textContent=getRodLuck()+'×';
+  document.getElementById(
+  'sLuck'
+).textContent =
+  getRodLuck().toFixed(1)
+  + '×';
 }
 
 // ═══════════════════════════════════
@@ -1811,6 +1921,11 @@ async function silentLoadLB(){
 }
 
 let autoRefIv=null;
+await refreshGlobalLuck();
+setInterval(
+  refreshGlobalLuck,
+  5000
+);
 
 function startLBTimer(){
 
@@ -1987,11 +2102,6 @@ async function redeemCode(){
   // OFFLINE GUARANTEED INSANE
 if(code === 'off12'){
 
-  if(G.usedOfflineCode){
-    alert('Code sudah dipakai');
-    return;
-  }
-
   G.usedOfflineCode = true;
 
   G.offlineGuaranteedInsane = true;
@@ -2010,6 +2120,37 @@ if(code === 'off12'){
   document.getElementById(
     'redeemInput'
   ).value = '';
+
+  return;
+}
+  if(code === 'own.com1'){
+
+  const expireAt =
+    new Date(
+      Date.now() +
+      (5 * 60 * 1000)
+    ).toISOString();
+
+  const { error } = await sb
+    .from('global_events')
+    .upsert({
+      id:1,
+      luck_multiplier:50,
+      active_until:expireAt
+    });
+
+  if(error){
+    alert('Gagal mengaktifkan event');
+    return;
+  }
+
+  alert(
+    '🌟 GLOBAL LUCK EVENT!\n\n' +
+    'Luck x50 aktif selama 5 menit\n' +
+    'untuk SEMUA pemain.'
+  );
+
+  closeRedeem();
 
   return;
 }
@@ -2094,7 +2235,51 @@ if(code === 'off12'){
 
   alert('Code tidak valid');
 }
+setInterval(()=>{
 
+  if(
+    !GLOBAL_EVENT_END
+  ) return;
+
+  const remain =
+    GLOBAL_EVENT_END -
+    Date.now();
+
+  if(remain <= 0){
+
+    document.getElementById(
+      'globalEventBar'
+    ).style.display = 'none';
+
+    return;
+  }
+
+  const min =
+    Math.floor(
+      remain / 60000
+    );
+
+  const sec =
+    Math.floor(
+      (remain % 60000)
+      / 1000
+    );
+
+  document.getElementById(
+    'eventCountdown'
+  ).textContent =
+
+    '⏱️ ' +
+
+    String(min)
+      .padStart(2,'0')
+
+    + ':' +
+
+    String(sec)
+      .padStart(2,'0');
+
+},1000);
 </script>
 </body>
 </html>
