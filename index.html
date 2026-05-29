@@ -964,7 +964,6 @@ function enterGame(){
   updateStats();
   setBiomeTheme();
   loadLB();
-  updateLeaderboard();
   startLBTimer();
   if(G.foundJungleSecret) document.getElementById('secretBanner').style.display='block';
 }
@@ -1920,8 +1919,10 @@ async function silentLoadLB(){
   });
 }
 
-let autoRefIv=null;
-await refreshGlobalLuck();
+let autoRefIv = null;
+
+refreshGlobalLuck();
+
 setInterval(
   refreshGlobalLuck,
   5000
